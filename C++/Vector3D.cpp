@@ -11,7 +11,7 @@ class Vector3D {
     Vector3D::Vector3D(float x, float y, float z):
 		  x (x), y (y), z (z) {}
 
-	Vector3D::Vector3D(Point3D p1, Point3D p2):
+	Vector3D::Vector3D(Point3D &p1, Point3D &p2):
 		x (p1.getX() - p2.getX()), y (p1.getY() - p1.getY()), z (p1.getZ() - p1.getZ()) {}
 
 	void Vector3D::normalize() {
