@@ -24,12 +24,12 @@ public class Vector {
 		return new Vector(x - vec.x, y - vec.y, z - vec.z);
 	}
 
-	public double projectOnAlpha(double alphaMax) {
-		return - Math.sin(Math.PI * Math.atan(y / x) / alphaMax);
+	public Vector applyThetaRotation(double theta) {
+		return new Vector(x*Math.cos(theta) + y*Math.sin(theta), y*Math.cos(theta) - x*Math.sin(theta), z);
 	}
 
-	public double projectOnBeta(double alphaMax) {
-		return Math.sin(Math.PI * Math.asin(z) / alphaMax);
+	public Vector applyPhiRotation(double phi) {
+		return new Vector(x, y*Math.cos(phi) + z*Math.sin(phi), z*Math.cos(phi) - y*Math.sin(phi));
 	}
 
 	@Override

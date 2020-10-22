@@ -1,6 +1,5 @@
 public class Point {
 	private double x, y, z;
-    private double x2d, y2d;
  
     public Point(double x, double y, double z) { 
 		this.x = x;
@@ -20,43 +19,48 @@ public class Point {
         return z;
     }
 
-    public void setX(double a) {
+    public void addX(double a) {
         x += a;
     }
 
-    public void setY(double a) {
+    public void addY(double a) {
         y += a;
     }
 
-    public void setZ(double a) {
+    public void addZ(double a) {
         z += a;
-    }
-
-    public double getX2D() {
-        return x2d;
-    }
-
-    public double getY2D()  {
-        return y2d;
-    }
-
-    public void get2dProjections(Vector cameraVec, Point cameraPoint, double alphaMax) {
-        Vector pointVec = new Vector(this, cameraPoint);
-        //System.out.println("pointVec " + pointVec);
-        pointVec.normalize();
-        //System.out.println("normalized pointVec " + pointVec);
-        //System.out.println("cameraVec " + cameraVec + "\n");
-        Vector difVec = pointVec.substract(cameraVec);
-        x2d = difVec.projectOnAlpha(alphaMax);
-        y2d = difVec.projectOnBeta(alphaMax);
     }
 
     public Boolean equals(Point b) {
         return x == b.getX() && y == b.getY() && z == b.getZ();
     }
 
+    public Point getPointNewBase(Point camera, double theta, double phi) {
+        Point pt = new Point(x, y, z);
+        pt.substract(camera);
+        pt.applyThetaRotation(theta);
+        pt.applyPhiRotation(phi);
+        return pt;
+	}
+
+    public void substract(Point pt) {
+        x -= pt.x;
+        y -= pt.y;
+        z -= pt.z;
+	}
+
+	public void applyThetaRotation(double theta) {
+        x = x*Math.cos(theta) + y*Math.sin(theta);
+        y = y*Math.cos(theta) - x*Math.sin(theta);
+	}
+
+	public void applyPhiRotation(double phi) {
+        y = y*Math.cos(phi) + z*Math.sin(phi);
+        z = z*Math.cos(phi) - y*Math.sin(phi);
+	}
+
     @Override
     public String toString() {
-        return "Point [x=" + x + ", x2d=" + x2d + ", y=" + y + ", y2d=" + y2d + ", z=" + z + "]";
+        return "Point [x=" + x + ", y=" + y + ", z=" + z + "]";
     }
 }

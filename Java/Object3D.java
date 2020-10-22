@@ -22,12 +22,6 @@ public class Object3D {
 		return true;
 	}
 
-	public void get2dProjections(Vector cameraVec, Point cameraPoint, double alphaMax) {
-		for (Triangle tri : faces) {
-			tri.get2dProjections(cameraVec, cameraPoint, alphaMax);
-		}
-	}
-
 	public ArrayList<Triangle> getFaces() {
 		return faces;
 	}
