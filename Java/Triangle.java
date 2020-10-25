@@ -25,6 +25,22 @@ public class Triangle {
 		return commonPoints == 2;
 	}
 
+	public Vector getNormal() {
+		return new Vector(points[1], points[0]).getNormal(new Vector(points[2], points[1]));
+	}
+
+	public Point getCenterOfGravity() {
+		double gx = 0, gy = 0, gz = 0;
+		for (int i = 0; i < 3; i++) {
+			gx += points[i].getX();
+			gy += points[i].getY();
+			gz += points[i].getZ();
+		}
+		Point g =  new Point(gx, gy, gz);
+		g.multiply(1.0/3.0);
+		return g;
+	}
+
 	@Override
 	public String toString() {
 		return "Triangle [points=" + Arrays.toString(points) + "]";

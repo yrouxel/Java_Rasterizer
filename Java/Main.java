@@ -12,22 +12,22 @@ public class Main {
 		Point g = new Point(20, 20, 10);
 		Point h = new Point(20, 20, 20);
 
-		Triangle t1 = new Triangle(a, b, c);
+		Triangle t1 = new Triangle(a, c, b);
 		Triangle t2 = new Triangle(b, c, d);
 
 		Triangle t3 = new Triangle(e, f, g);
-		Triangle t4 = new Triangle(f, g, h);
+		Triangle t4 = new Triangle(g, f, h);
 
-		Triangle t5 = new Triangle(a, c, e);
+		Triangle t5 = new Triangle(c, a, e);
 		Triangle t6 = new Triangle(e, g, c);
 
 		Triangle t7 = new Triangle(b, d, f);
-		Triangle t8 = new Triangle(d, f, h);
+		Triangle t8 = new Triangle(f, d, h);
 
 		Triangle t9 = new Triangle(a, b, e);
-		Triangle t10 = new Triangle(b, e, f);
+		Triangle t10 = new Triangle(e, b, f);
 
-		Triangle t11 = new Triangle(c, d, g);
+		Triangle t11 = new Triangle(d, c, g);
 		Triangle t12 = new Triangle(d, g, h);
 
 		ArrayList<Triangle> list = new ArrayList<Triangle>();

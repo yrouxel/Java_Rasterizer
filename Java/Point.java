@@ -38,8 +38,7 @@ public class Point {
     public Point getPointNewBase(Point camera, double theta, double phi) {
         Point pt = new Point(x, y, z);
         pt.substract(camera);
-        pt.applyThetaRotation(theta);
-        pt.applyPhiRotation(phi);
+        pt.rotate(theta, phi);
         return pt;
 	}
 
@@ -47,7 +46,24 @@ public class Point {
         x -= pt.x;
         y -= pt.y;
         z -= pt.z;
-	}
+    }
+
+    public void add(Point p) {
+		x += p.x;
+		y += p.y;
+		z += p.z;
+    }
+
+    public void multiply(double a) {
+        x *= a;
+        y *= a;
+        z *= a;
+    }
+    
+    public void rotate(double theta, double phi) {
+        applyThetaRotation(theta);
+        applyPhiRotation(phi);
+    }
 
 	public void applyThetaRotation(double theta) {
         x = x*Math.cos(theta) + y*Math.sin(theta);
@@ -57,7 +73,15 @@ public class Point {
 	public void applyPhiRotation(double phi) {
         y = y*Math.cos(phi) + z*Math.sin(phi);
         z = z*Math.cos(phi) - y*Math.sin(phi);
-	}
+    }
+    
+    public int get2DXTransformation(double offset, double focalDistance) {
+        return (int)(offset + x * focalDistance / y);
+    }
+
+    public int get2DYTransformation(double offset, double focalDistance) {
+        return (int)(offset - z * focalDistance / y);
+    }
 
     @Override
     public String toString() {
