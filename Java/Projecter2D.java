@@ -73,21 +73,48 @@ public class Projecter2D extends JFrame {
 	}
 
 	public void drawTriangle(Triangle tri) {
-		//prend en compte l'angle mais pas la position -> faire l'inverse
 		Vector normal = tri.getNormal();
 		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
 		if (normal.getScalarProduct(cameraToTriangle) < 0) {
 			for (int i = 0; i < 3; i++) {
 				drawLine(tri.getPoints()[i], tri.getPoints()[(i+1)%3]);
-				// System.out.println("\n");
 			}
 		}
 	} 
 
-	public void drawObject(Object3D obj) {
+	public void drawTriangle2(Graphics g, Triangle tri) {
+		Vector normal = tri.getNormal();
+		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
+		normal.normalize();
+		cameraToTriangle.normalize();
+		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
+
+		if (scalarProduct < 0) {
+			Point a = tri.getPoints()[0].getPointNewBase(cameraP, cameraTheta, cameraPhi);
+			Point b = tri.getPoints()[1].getPointNewBase(cameraP, cameraTheta, cameraPhi);
+			Point c = tri.getPoints()[2].getPointNewBase(cameraP, cameraTheta, cameraPhi);
+
+			int[] xs = new int[3];
+			int[] ys = new int[3];
+	
+			xs[0] = a.get2DXTransformation(dim.getWidth()/2, focalDistance);
+			xs[1] = b.get2DXTransformation(dim.getWidth()/2, focalDistance);
+			xs[2] = c.get2DXTransformation(dim.getWidth()/2, focalDistance);
+
+			ys[0] = a.get2DYTransformation(dim.getHeight()/2, focalDistance);
+			ys[1] = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
+			ys[2] = c.get2DYTransformation(dim.getHeight()/2, focalDistance);
+
+			int grey = (int) (-255.0 * scalarProduct);
+			Color color = new Color(grey, grey, grey);
+			g.setColor(color);
+			g.fillPolygon(xs, ys, 3);
+		}
+	} 
+
+	public void drawObject(Graphics g, Object3D obj) {
 		for (Triangle tri : obj.getFaces()) {
-			drawTriangle(tri);
-			// System.out.println("----------------\n");
+			drawTriangle2(g, tri);
 		}
 	}
 
@@ -113,7 +140,7 @@ public class Projecter2D extends JFrame {
 		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
 
 		g.setColor(Color.WHITE);
-		drawObject(obj);
+		drawObject(g, obj);
 		// drawGrid();
 	}
 

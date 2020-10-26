@@ -76,11 +76,11 @@ public class Point {
     }
     
     public int get2DXTransformation(double offset, double focalDistance) {
-        return (int)(offset + x * focalDistance / y);
+        return (int)(offset + x * focalDistance / y + focalDistance);
     }
 
     public int get2DYTransformation(double offset, double focalDistance) {
-        return (int)(offset - z * focalDistance / y);
+        return (int)(offset - z * focalDistance / y + focalDistance);
     }
 
     @Override

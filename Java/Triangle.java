@@ -30,13 +30,10 @@ public class Triangle {
 	}
 
 	public Point getCenterOfGravity() {
-		double gx = 0, gy = 0, gz = 0;
-		for (int i = 0; i < 3; i++) {
-			gx += points[i].getX();
-			gy += points[i].getY();
-			gz += points[i].getZ();
-		}
-		Point g =  new Point(gx, gy, gz);
+		Point g = new Point(0, 0, 0);
+		g.add(points[0]);
+		g.add(points[1]);
+		g.add(points[2]);
 		g.multiply(1.0/3.0);
 		return g;
 	}
