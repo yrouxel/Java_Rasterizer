@@ -123,6 +123,7 @@ public class Projecter2D extends JFrame {
 	} 
 
 	public void drawObject(Graphics g, Object3D obj) {
+		// add a sorting by depth mecanism
 		for (Triangle tri : obj.getFaces()) {
 			drawTriangle2(g, tri);
 		}

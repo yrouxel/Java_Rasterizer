@@ -44,7 +44,10 @@ public class Main {
 		list.add(t11);
 		list.add(t12);
 
-		Object3D obj = new Object3D(list);
+		// Object3D obj = new Object3D(list);
+
+		Object3D obj = new Object3D();
+		obj.getObjectFromFile("teapot.obj");
 
 		new Projecter2D(obj);
 	}
