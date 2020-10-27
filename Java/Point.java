@@ -40,6 +40,15 @@ public class Point {
         pt.substract(camera);
         pt.rotate(theta, phi);
         return pt;
+    }
+    
+    public Point getPointNewBase2(Point camera, double theta, double phi) {
+        Point pt = new Point(x, y, z);
+        Point cameraBis = new Point(camera.x, camera.y, camera.z);
+        pt.rotate(theta, phi);
+        cameraBis.rotate(theta, phi);
+        pt.substract(cameraBis);
+        return pt;
 	}
 
     public void substract(Point pt) {
@@ -76,11 +85,11 @@ public class Point {
     }
     
     public int get2DXTransformation(double offset, double focalDistance) {
-        return (int)(offset + x * focalDistance / y + focalDistance);
+        return (int)(offset + x * focalDistance / y);
     }
 
     public int get2DYTransformation(double offset, double focalDistance) {
-        return (int)(offset - z * focalDistance / y + focalDistance);
+        return (int)(offset - z * focalDistance / y);
     }
 
     @Override

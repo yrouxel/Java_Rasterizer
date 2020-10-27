@@ -22,6 +22,8 @@ public class Projecter2D extends JFrame {
 
 	private Object3D obj;
 
+	private Robot robot;
+
 	public Projecter2D(Object3D obj) {
 		super("3D ENGINE");
 		this.obj = obj;
@@ -35,10 +37,27 @@ public class Projecter2D extends JFrame {
 		mainPanel.setBackground(Color.green);
 		this.setContentPane(mainPanel);
 
+		BufferedImage cursorImg = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+		// Create a new blank cursor.
+		Cursor blankCursor = Toolkit.getDefaultToolkit().createCustomCursor(cursorImg, new java.awt.Point(0, 0), "blank cursor");
+		// Set the blank cursor to the JFrame.
+		mainPanel.setCursor(blankCursor);
+
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+		try {
+			robot = new Robot();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(0);
+		}
 
 		addKeyListener(new MoveKeyListener());
 		addMouseMotionListener(new CameraMouseListener());
+
+		setVisible(true);
+
+		monBuf = new BufferedImage(dim.width, dim.height, BufferedImage.TYPE_INT_RGB);
 
 		Timer t = new Timer(20, new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -47,37 +66,28 @@ public class Projecter2D extends JFrame {
 		});
 		t.start();
 
-		setVisible(true);
-
-		monBuf = new BufferedImage(dim.width, dim.height, BufferedImage.TYPE_INT_RGB);
-
 		focalDistance = dim.getHeight() / (2 * Math.tan(alphaMax / 2.0));
 	}
 
-	public void drawLine(Point a, Point b) {
-		// System.out.println("a0 = (" + a.getX() + ", " + a.getY() + ", " + a.getZ() + ")");
-		a = a.getPointNewBase(cameraP, cameraTheta, cameraPhi);
-		// System.out.println("a1 = (" + a.getX() + ", " + a.getY() + ", " + a.getZ() + ")");
-		
+	public void drawLine(Graphics g, Point a, Point b) {
+		a = a.getPointNewBase(cameraP, cameraTheta, cameraPhi);		
 		b = b.getPointNewBase(cameraP, cameraTheta, cameraPhi);
 
 		int x1 = a.get2DXTransformation(dim.getWidth()/2, focalDistance);
-		int y1 = a.get2DYTransformation(dim.getHeight()/2, focalDistance);
 		int x2 = b.get2DXTransformation(dim.getWidth()/2, focalDistance);
+
+		int y1 = a.get2DYTransformation(dim.getHeight()/2, focalDistance);
 		int y2 = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
 
-		// System.out.println("a2 = (" + x1 + ", " + y1 + ")");
-		// System.out.println("b = (" + x2 + ", " + y2 + ")");
-
-		monBuf.getGraphics().drawLine(x1, y1, x2, y2);
+		g.drawLine(x1, y1, x2, y2);
 	}
 
-	public void drawTriangle(Triangle tri) {
+	public void drawTriangle(Graphics g, Triangle tri) {
 		Vector normal = tri.getNormal();
 		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
 		if (normal.getScalarProduct(cameraToTriangle) < 0) {
 			for (int i = 0; i < 3; i++) {
-				drawLine(tri.getPoints()[i], tri.getPoints()[(i+1)%3]);
+				drawLine(g, tri.getPoints()[i], tri.getPoints()[(i+1)%3]);
 			}
 		}
 	} 
@@ -89,7 +99,7 @@ public class Projecter2D extends JFrame {
 		cameraToTriangle.normalize();
 		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
 
-		if (scalarProduct < 0) {
+		if (scalarProduct < 0 && Math.acos(Math.abs(scalarProduct)) < alphaMax) {
 			Point a = tri.getPoints()[0].getPointNewBase(cameraP, cameraTheta, cameraPhi);
 			Point b = tri.getPoints()[1].getPointNewBase(cameraP, cameraTheta, cameraPhi);
 			Point c = tri.getPoints()[2].getPointNewBase(cameraP, cameraTheta, cameraPhi);
@@ -118,15 +128,15 @@ public class Projecter2D extends JFrame {
 		}
 	}
 
-	public void drawGrid() {
+	public void drawGrid(Graphics g) {
 		for (Point point : grid.getPoints()) {
 			Point topPoint   = new Point(point.getX(), point.getY(), point.getZ() + space);
 			Point backPoint  = new Point(point.getX(), point.getY() + space, point.getZ());
 			Point rightPoint = new Point(point.getX() + space, point.getY(), point.getZ());
 
-			drawLine(point, topPoint);
-			drawLine(point, backPoint);
-			drawLine(point, rightPoint);
+			drawLine(g, point, topPoint);
+			drawLine(g, point, backPoint);
+			drawLine(g, point, rightPoint);
 		}
 	}
 
@@ -141,7 +151,7 @@ public class Projecter2D extends JFrame {
 
 		g.setColor(Color.WHITE);
 		drawObject(g, obj);
-		// drawGrid();
+		// drawGrid(g);
 	}
 
 	public class MoveKeyListener implements KeyListener {
@@ -159,9 +169,14 @@ public class Projecter2D extends JFrame {
 				movement.addX(-move);
 			} else if (key == 'd') {
 				movement.addX(move);
+			} else if (key == 'r') {
+				movement.addZ(move);
+			} else if (key == 'f') {
+				movement.addZ(-move);
 			}
 
-			movement = movement.getPointNewBase(new Point(0, 0, 0), -cameraTheta, -cameraPhi);
+			movement.applyThetaRotation(-cameraTheta);
+			// System.out.println(movement);
 			cameraP.add(movement);
 		}
 		public void keyReleased(KeyEvent e) {
@@ -179,8 +194,7 @@ public class Projecter2D extends JFrame {
 		public void mouseMoved(MouseEvent e) {
 			cameraTheta -= (e.getXOnScreen() - mouseX) * 2.0 * Math.PI/dim.getWidth();
 			cameraPhi   -= (e.getYOnScreen() - mouseY) * 2.0 * Math.PI/dim.getHeight();
-			mouseX = e.getXOnScreen();
-			mouseY = e.getYOnScreen();
+			robot.mouseMove(mouseX, mouseY);
 		}
 	}
 }
