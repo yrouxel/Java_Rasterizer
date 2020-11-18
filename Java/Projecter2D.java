@@ -3,7 +3,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import java.awt.image.BufferedImage;
-import java.util.Comparator;
+import java.util.Collections;
+import java.util.Map;
 import java.util.TreeMap;
 import java.awt.*;
 
@@ -11,6 +12,7 @@ public class Projecter2D extends JFrame {
 	private Dimension dim;
 	private BufferedImage monBuf; // buffer d’affichage
 	private Point cameraP = new Point(0, 0, 0);
+	private Point lightingP = new Point(0, 0, 10);
 
 	private double cameraTheta = 0;
 	private double cameraPhi = 0;
@@ -24,6 +26,8 @@ public class Projecter2D extends JFrame {
 	private Object3D obj;
 
 	private Robot robot;
+
+	TreeMap<Double, Triangle> depthTriangles = new TreeMap<Double, Triangle>(Collections.reverseOrder());
 
 	public Projecter2D(Object3D obj) {
 		super("3D ENGINE");
@@ -87,21 +91,16 @@ public class Projecter2D extends JFrame {
 		}
 	}
 
-	public void sortTriangle(Triangle tri) {
-		// Comparator comp = new Comparator();
-		// TreeMap<Triangle, Color> depthTriangles = new TreeMap<Triangle, Color>();
-		Vector normal = tri.getNormal();
-		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
-		normal.normalize();
-		cameraToTriangle.normalize();
-		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
+	public void drawTriangles(Graphics g) {
+		for (Map.Entry<Double, Triangle> entry : depthTriangles.entrySet()) {
+			drawTriangle(g, entry.getValue());
+		}
 
-		if (scalarProduct < 0 && Math.acos(Math.abs(scalarProduct)) < alphaMax) {}
 	}
 
 	public void drawTriangle(Graphics g, Triangle tri) {
 		Vector normal = tri.getNormal();
-		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
+		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
 		normal.normalize();
 		cameraToTriangle.normalize();
 		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
@@ -129,13 +128,6 @@ public class Projecter2D extends JFrame {
 		}
 	} 
 
-	public void drawObject(Graphics g, Object3D obj) {
-		// add a sorting by depth mecanism
-		for (Triangle tri : obj.getFaces()) {
-			drawTriangle(g, tri);
-		}
-	}
-
 	public void drawGrid(Graphics g) {
 		g.setColor(Color.WHITE);
 		for (Point point : grid.getPoints()) {
@@ -158,18 +150,27 @@ public class Projecter2D extends JFrame {
 		g.setColor(Color.BLACK);
 		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
 
+		sortTriangles();
+		drawTriangles(g);
+
+		// displayComments(g);
+		// drawGrid(g);
+	}
+
+	public void displayComments(Graphics g) {
 		g.setColor(Color.WHITE);
 		g.drawString("(" + cameraP.getX() + ", " + cameraP.getY() + ", " + cameraP.getZ() + ")", 20, 20);
 
 		Point movement = new Point(0, 100, 0);
 		movement.rotate(-cameraTheta, -cameraPhi);
+		g.drawString("(" + (int)movement.getX() + ", " + (int)movement.getY() + ", " + (int)movement.getZ() + ")", 20, 40);
+	}
 
-		g.drawString("(" + (int)movement.getX() + ", " + (int)movement.getY() + ", " + (int)movement.getZ() + ") -> NORM = " + (int)movement.getNorm(), 20, 40);
-
-		// drawObject(g, obj);
-
-		g.setColor(Color.WHITE);
-		drawGrid(g);
+	public void sortTriangles() {
+		depthTriangles.clear();
+		for (Triangle tri : obj.getFaces()) {
+			depthTriangles.put(new Vector(tri.getCenterOfGravity(), cameraP).getNorm(), tri);
+		}
 	}
 
 	public class MoveKeyListener implements KeyListener {
@@ -191,14 +192,9 @@ public class Projecter2D extends JFrame {
 				movement.addZ(move);
 			} else if (key == 'f') {
 				movement.addZ(-move);
-			} else if (key == 'w') {
-				cameraTheta += Math.PI/2;
-			} else if (key == 'x') {
-				cameraTheta -= Math.PI/2;
 			}
 
-			movement.applyThetaRotation(-cameraTheta);
-			// System.out.println(movement);
+			movement.rotate(-cameraTheta, -cameraPhi);
 			cameraP.add(movement);
 		}
 		public void keyReleased(KeyEvent e) {

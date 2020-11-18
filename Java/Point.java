@@ -65,27 +65,15 @@ public class Point {
     }
     
     public void rotate(double theta, double phi) {
-        // double normBefore = getNorm();
-        applyThetaRotation(theta);
-        applyPhiRotation(phi);
-        // double diff = getNorm() - normBefore;
-        // if (Math.abs(diff) > Math.abs(normBefore/100)) {
-        //     System.out.println("NORM ERROR");
-        // }
-    }
-
-	public void applyThetaRotation(double theta) {
         double xBefore = x;
-        double yBefore = y;
-        x = xBefore*Math.cos(theta) + yBefore*Math.sin(theta);
-        y = yBefore*Math.cos(theta) - xBefore*Math.sin(theta);
-	}
 
-	public void applyPhiRotation(double phi) {
-        double yBefore = y;
-        double zBefore = z;
-        y = yBefore*Math.cos(phi) + zBefore*Math.sin(phi);
-        z = zBefore*Math.cos(phi) - yBefore*Math.sin(phi);
+        //theta rotation
+        x = xBefore*Math.cos(theta) + y*Math.sin(theta);
+        double yBefore = y*Math.cos(theta) - xBefore*Math.sin(theta);
+
+        //phi rotation
+        y = yBefore*Math.cos(phi) + z*Math.sin(phi);
+        z = z*Math.cos(phi) - yBefore*Math.sin(phi);
     }
     
     public int get2DXTransformation(double offset, double focalDistance) {

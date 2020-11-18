@@ -14,7 +14,7 @@ public class Vector {
 	}		
 
 	public void normalize() {
-		double norm = Math.sqrt(x*x + y*y + z*z);
+		double norm = getNorm();
 		x = x/norm;
 		y = y/norm;
 		z = z/norm;
@@ -51,6 +51,10 @@ public class Vector {
 	public void applyPhiRotation(double phi) {
         y = y*Math.cos(phi) + z*Math.sin(phi);
         z = z*Math.cos(phi) - y*Math.sin(phi);
+	}
+	
+	public double getNorm() {
+        return Math.sqrt(x*x + y*y + z*z);
     }
 
 	public Vector getNormal(Vector b) {
