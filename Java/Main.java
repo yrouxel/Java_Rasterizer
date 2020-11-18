@@ -50,5 +50,10 @@ public class Main {
 		obj.getObjectFromFile("teapot.obj");
 
 		new Projecter2D(obj);
+
+		// Point test = new Point(0, 1, 0);
+		// System.out.println(test);
+		// test.applyThetaRotation(Math.PI/2);
+		// System.out.println(test);
 	}
 }

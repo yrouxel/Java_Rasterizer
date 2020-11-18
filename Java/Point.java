@@ -41,15 +41,6 @@ public class Point {
         pt.rotate(theta, phi);
         return pt;
     }
-    
-    public Point getPointNewBase2(Point camera, double theta, double phi) {
-        Point pt = new Point(x, y, z);
-        Point cameraBis = new Point(camera.x, camera.y, camera.z);
-        pt.rotate(theta, phi);
-        cameraBis.rotate(theta, phi);
-        pt.substract(cameraBis);
-        return pt;
-	}
 
     public void substract(Point pt) {
         x -= pt.x;
@@ -68,20 +59,33 @@ public class Point {
         y *= a;
         z *= a;
     }
+
+    public double getNorm() {
+        return Math.sqrt(x*x + y*y + z*z);
+    }
     
     public void rotate(double theta, double phi) {
+        // double normBefore = getNorm();
         applyThetaRotation(theta);
         applyPhiRotation(phi);
+        // double diff = getNorm() - normBefore;
+        // if (Math.abs(diff) > Math.abs(normBefore/100)) {
+        //     System.out.println("NORM ERROR");
+        // }
     }
 
 	public void applyThetaRotation(double theta) {
-        x = x*Math.cos(theta) + y*Math.sin(theta);
-        y = y*Math.cos(theta) - x*Math.sin(theta);
+        double xBefore = x;
+        double yBefore = y;
+        x = xBefore*Math.cos(theta) + yBefore*Math.sin(theta);
+        y = yBefore*Math.cos(theta) - xBefore*Math.sin(theta);
 	}
 
 	public void applyPhiRotation(double phi) {
-        y = y*Math.cos(phi) + z*Math.sin(phi);
-        z = z*Math.cos(phi) - y*Math.sin(phi);
+        double yBefore = y;
+        double zBefore = z;
+        y = yBefore*Math.cos(phi) + zBefore*Math.sin(phi);
+        z = zBefore*Math.cos(phi) - yBefore*Math.sin(phi);
     }
     
     public int get2DXTransformation(double offset, double focalDistance) {

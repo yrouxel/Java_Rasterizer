@@ -3,6 +3,9 @@ import java.util.Arrays;
 public class Triangle {
 	private Point points[] = new Point[3];
 
+	// private Color color;
+	// private Double depth;
+
 	public Triangle(Point a, Point b, Point c) {
 		points[0] = a;
 		points[1] = b;

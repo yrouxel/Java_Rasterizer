@@ -3,7 +3,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import java.awt.image.BufferedImage;
-
+import java.util.Comparator;
+import java.util.TreeMap;
 import java.awt.*;
 
 public class Projecter2D extends JFrame {
@@ -49,7 +50,6 @@ public class Projecter2D extends JFrame {
 			robot = new Robot();
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.exit(0);
 		}
 
 		addKeyListener(new MoveKeyListener());
@@ -73,26 +73,33 @@ public class Projecter2D extends JFrame {
 		a = a.getPointNewBase(cameraP, cameraTheta, cameraPhi);		
 		b = b.getPointNewBase(cameraP, cameraTheta, cameraPhi);
 
-		int x1 = a.get2DXTransformation(dim.getWidth()/2, focalDistance);
-		int x2 = b.get2DXTransformation(dim.getWidth()/2, focalDistance);
+		if (a.getY() > 0 && b.getY() > 0) {
 
-		int y1 = a.get2DYTransformation(dim.getHeight()/2, focalDistance);
-		int y2 = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
+			int x1 = a.get2DXTransformation(dim.getWidth()/2, focalDistance);
+			int x2 = b.get2DXTransformation(dim.getWidth()/2, focalDistance);
 
-		g.drawLine(x1, y1, x2, y2);
+			int y1 = a.get2DYTransformation(dim.getHeight()/2, focalDistance);
+			int y2 = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
+
+			g.drawLine(x1, y1, x2, y2);
+			g.drawString((int)a.getX() + ", " + (int)a.getY() + ", " + (int)a.getZ(), x1-10, y1-10);
+			g.drawString((int)a.getX() + ", " + (int)a.getY() + ", " + (int)a.getZ(), x2-10, y2-10);
+		}
+	}
+
+	public void sortTriangle(Triangle tri) {
+		// Comparator comp = new Comparator();
+		// TreeMap<Triangle, Color> depthTriangles = new TreeMap<Triangle, Color>();
+		Vector normal = tri.getNormal();
+		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
+		normal.normalize();
+		cameraToTriangle.normalize();
+		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
+
+		if (scalarProduct < 0 && Math.acos(Math.abs(scalarProduct)) < alphaMax) {}
 	}
 
 	public void drawTriangle(Graphics g, Triangle tri) {
-		Vector normal = tri.getNormal();
-		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
-		if (normal.getScalarProduct(cameraToTriangle) < 0) {
-			for (int i = 0; i < 3; i++) {
-				drawLine(g, tri.getPoints()[i], tri.getPoints()[(i+1)%3]);
-			}
-		}
-	} 
-
-	public void drawTriangle2(Graphics g, Triangle tri) {
 		Vector normal = tri.getNormal();
 		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
 		normal.normalize();
@@ -125,11 +132,12 @@ public class Projecter2D extends JFrame {
 	public void drawObject(Graphics g, Object3D obj) {
 		// add a sorting by depth mecanism
 		for (Triangle tri : obj.getFaces()) {
-			drawTriangle2(g, tri);
+			drawTriangle(g, tri);
 		}
 	}
 
 	public void drawGrid(Graphics g) {
+		g.setColor(Color.WHITE);
 		for (Point point : grid.getPoints()) {
 			Point topPoint   = new Point(point.getX(), point.getY(), point.getZ() + space);
 			Point backPoint  = new Point(point.getX(), point.getY() + space, point.getZ());
@@ -151,8 +159,17 @@ public class Projecter2D extends JFrame {
 		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
 
 		g.setColor(Color.WHITE);
-		drawObject(g, obj);
-		// drawGrid(g);
+		g.drawString("(" + cameraP.getX() + ", " + cameraP.getY() + ", " + cameraP.getZ() + ")", 20, 20);
+
+		Point movement = new Point(0, 100, 0);
+		movement.rotate(-cameraTheta, -cameraPhi);
+
+		g.drawString("(" + (int)movement.getX() + ", " + (int)movement.getY() + ", " + (int)movement.getZ() + ") -> NORM = " + (int)movement.getNorm(), 20, 40);
+
+		// drawObject(g, obj);
+
+		g.setColor(Color.WHITE);
+		drawGrid(g);
 	}
 
 	public class MoveKeyListener implements KeyListener {
@@ -174,6 +191,10 @@ public class Projecter2D extends JFrame {
 				movement.addZ(move);
 			} else if (key == 'f') {
 				movement.addZ(-move);
+			} else if (key == 'w') {
+				cameraTheta += Math.PI/2;
+			} else if (key == 'x') {
+				cameraTheta -= Math.PI/2;
 			}
 
 			movement.applyThetaRotation(-cameraTheta);
@@ -196,6 +217,8 @@ public class Projecter2D extends JFrame {
 			cameraTheta -= (e.getXOnScreen() - mouseX) * 2.0 * Math.PI/dim.getWidth();
 			cameraPhi   -= (e.getYOnScreen() - mouseY) * 2.0 * Math.PI/dim.getHeight();
 			robot.mouseMove(mouseX, mouseY);
+			// mouseX = e.getXOnScreen();
+			// mouseY = e.getYOnScreen();
 		}
 	}
 }
