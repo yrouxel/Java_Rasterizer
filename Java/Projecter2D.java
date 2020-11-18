@@ -100,12 +100,15 @@ public class Projecter2D extends JFrame {
 
 	public void drawTriangle(Graphics g, Triangle tri) {
 		Vector normal = tri.getNormal();
-		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
+		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
+		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
 		normal.normalize();
-		cameraToTriangle.normalize();
+		lightToTriangle.normalize();
+		int grey = (int) Math.max(-255.0 * normal.getScalarProduct(lightToTriangle), 0);
+
 		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
 
-		if (scalarProduct < 0 && Math.acos(Math.abs(scalarProduct)) < alphaMax) {
+		if (scalarProduct < 0) {
 			Point a = tri.getPoints()[0].getPointNewBase(cameraP, cameraTheta, cameraPhi);
 			Point b = tri.getPoints()[1].getPointNewBase(cameraP, cameraTheta, cameraPhi);
 			Point c = tri.getPoints()[2].getPointNewBase(cameraP, cameraTheta, cameraPhi);
@@ -121,7 +124,6 @@ public class Projecter2D extends JFrame {
 			ys[1] = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
 			ys[2] = c.get2DYTransformation(dim.getHeight()/2, focalDistance);
 
-			int grey = (int) (-255.0 * scalarProduct);
 			Color color = new Color(grey, grey, grey);
 			g.setColor(color);
 			g.fillPolygon(xs, ys, 3);
