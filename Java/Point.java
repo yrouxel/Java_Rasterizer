@@ -59,10 +59,6 @@ public class Point {
         y *= a;
         z *= a;
     }
-
-    public double getNorm() {
-        return Math.sqrt(x*x + y*y + z*z);
-    }
     
     public void rotate(double theta, double phi) {
         double xBefore = x;

@@ -87,8 +87,8 @@ public class Projecter2D extends JFrame {
 			int y2 = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
 
 			g.drawLine(x1, y1, x2, y2);
-			g.drawString((int)a.getX() + ", " + (int)a.getY() + ", " + (int)a.getZ(), x1-10, y1-10);
-			g.drawString((int)a.getX() + ", " + (int)a.getY() + ", " + (int)a.getZ(), x2-10, y2-10);
+			// g.drawString((int)a.getX() + ", " + (int)a.getY() + ", " + (int)a.getZ(), x1-10, y1-10);
+			// g.drawString((int)a.getX() + ", " + (int)a.getY() + ", " + (int)a.getZ(), x2-10, y2-10);
 		}
 	}
 
@@ -102,34 +102,29 @@ public class Projecter2D extends JFrame {
 	public void drawTriangle(Graphics g, Triangle tri) {
 		Vector normal = tri.getNormal();
 		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
-		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
 		normal.normalize();
 		lightToTriangle.normalize();
 		double shade = Math.max(-2.0 * normal.getScalarProduct(lightToTriangle), 0);
 
-		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
+		Point a = tri.getPoints()[0].getPointNewBase(cameraP, cameraTheta, cameraPhi);
+		Point b = tri.getPoints()[1].getPointNewBase(cameraP, cameraTheta, cameraPhi);
+		Point c = tri.getPoints()[2].getPointNewBase(cameraP, cameraTheta, cameraPhi);
 
-		if (scalarProduct < 0) {
-			Point a = tri.getPoints()[0].getPointNewBase(cameraP, cameraTheta, cameraPhi);
-			Point b = tri.getPoints()[1].getPointNewBase(cameraP, cameraTheta, cameraPhi);
-			Point c = tri.getPoints()[2].getPointNewBase(cameraP, cameraTheta, cameraPhi);
+		int[] xs = new int[3];
+		int[] ys = new int[3];
 
-			int[] xs = new int[3];
-			int[] ys = new int[3];
-	
-			xs[0] = a.get2DXTransformation(dim.getWidth()/2, focalDistance);
-			xs[1] = b.get2DXTransformation(dim.getWidth()/2, focalDistance);
-			xs[2] = c.get2DXTransformation(dim.getWidth()/2, focalDistance);
+		xs[0] = a.get2DXTransformation(dim.getWidth()/2, focalDistance);
+		xs[1] = b.get2DXTransformation(dim.getWidth()/2, focalDistance);
+		xs[2] = c.get2DXTransformation(dim.getWidth()/2, focalDistance);
 
-			ys[0] = a.get2DYTransformation(dim.getHeight()/2, focalDistance);
-			ys[1] = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
-			ys[2] = c.get2DYTransformation(dim.getHeight()/2, focalDistance);
+		ys[0] = a.get2DYTransformation(dim.getHeight()/2, focalDistance);
+		ys[1] = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
+		ys[2] = c.get2DYTransformation(dim.getHeight()/2, focalDistance);
 
-			Color color = new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue())));
-			// Color color = new Color(shade, shade, shade);
-			g.setColor(color);
-			g.fillPolygon(xs, ys, 3);
-		}
+		Color color = new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue())));
+		// Color color = new Color(shade, shade, shade);
+		g.setColor(color);
+		g.fillPolygon(xs, ys, 3);
 	} 
 
 	public void drawGrid(Graphics g) {
@@ -174,7 +169,10 @@ public class Projecter2D extends JFrame {
 	public void sortTriangles() {
 		depthTriangles.clear();
 		for (Triangle tri : obj.getFaces()) {
-			depthTriangles.put(new Vector(tri.getCenterOfGravity(), cameraP).getNorm(), tri);
+			Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
+			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0) {
+				depthTriangles.put(cameraToTriangle.getNorm(), tri);
+			}
 		}
 	}
 

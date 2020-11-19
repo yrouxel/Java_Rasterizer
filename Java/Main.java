@@ -47,7 +47,8 @@ public class Main {
 		// Object3D obj = new Object3D(list);
 
 		Object3D obj = new Object3D();
-		obj.getObjectFromFile("Objects/WatchTower/wooden_watch_tower.obj");
+		// obj.getObjectFromFile("Objects/WatchTower/wooden_watch_tower.obj");
+		obj.getObjectFromFile("Objects/doom_combat_scene/doom_combat_scene.obj");
 
 		new Projecter2D(obj);
 
