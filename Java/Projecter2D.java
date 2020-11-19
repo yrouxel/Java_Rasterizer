@@ -11,7 +11,7 @@ import java.awt.*;
 public class Projecter2D extends JFrame {
 	private Dimension dim;
 	private BufferedImage monBuf; // buffer d’affichage
-	private Point cameraP = new Point(0, 0, 0);
+	private Point cameraP = new Point(0, 0, 5);
 	private Point lightingP = new Point(0, 0, 10);
 
 	private double cameraTheta = 0;
@@ -26,6 +26,7 @@ public class Projecter2D extends JFrame {
 	private Object3D obj;
 
 	private Robot robot;
+	private Boolean mouseLocked = false;
 
 	TreeMap<Double, Triangle> depthTriangles = new TreeMap<Double, Triangle>(Collections.reverseOrder());
 
@@ -104,7 +105,7 @@ public class Projecter2D extends JFrame {
 		Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
 		normal.normalize();
 		lightToTriangle.normalize();
-		int grey = (int) Math.max(-255.0 * normal.getScalarProduct(lightToTriangle), 0);
+		double shade = Math.max(-2.0 * normal.getScalarProduct(lightToTriangle), 0);
 
 		double scalarProduct = normal.getScalarProduct(cameraToTriangle);
 
@@ -124,7 +125,8 @@ public class Projecter2D extends JFrame {
 			ys[1] = b.get2DYTransformation(dim.getHeight()/2, focalDistance);
 			ys[2] = c.get2DYTransformation(dim.getHeight()/2, focalDistance);
 
-			Color color = new Color(grey, grey, grey);
+			Color color = new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue())));
+			// Color color = new Color(shade, shade, shade);
 			g.setColor(color);
 			g.fillPolygon(xs, ys, 3);
 		}
@@ -156,6 +158,7 @@ public class Projecter2D extends JFrame {
 		drawTriangles(g);
 
 		// displayComments(g);
+		// g.setColor(Color.WHITE);
 		// drawGrid(g);
 	}
 
@@ -194,6 +197,8 @@ public class Projecter2D extends JFrame {
 				movement.addZ(move);
 			} else if (key == 'f') {
 				movement.addZ(-move);
+			} else if (key == 'w') {
+				mouseLocked = !mouseLocked;
 			}
 
 			movement.rotate(-cameraTheta, -cameraPhi);
@@ -212,11 +217,11 @@ public class Projecter2D extends JFrame {
 		public void mouseDragged(MouseEvent e) {
 		}
 		public void mouseMoved(MouseEvent e) {
-			cameraTheta -= (e.getXOnScreen() - mouseX) * 2.0 * Math.PI/dim.getWidth();
-			cameraPhi   -= (e.getYOnScreen() - mouseY) * 2.0 * Math.PI/dim.getHeight();
-			robot.mouseMove(mouseX, mouseY);
-			// mouseX = e.getXOnScreen();
-			// mouseY = e.getYOnScreen();
+			if (!mouseLocked) {
+				cameraTheta -= (e.getXOnScreen() - mouseX) * 2.0 * Math.PI/dim.getWidth();
+				cameraPhi   -= (e.getYOnScreen() - mouseY) * 2.0 * Math.PI/dim.getHeight();
+				robot.mouseMove(mouseX, mouseY);
+			}
 		}
 	}
 }

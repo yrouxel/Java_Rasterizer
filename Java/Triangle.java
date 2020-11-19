@@ -1,12 +1,20 @@
 import java.util.Arrays;
+import java.awt.*;
 
 public class Triangle {
 	private Point points[] = new Point[3];
 
-	// private Color color;
-	// private Double depth;
+	private Color color;
+
+	public Triangle(Point a, Point b, Point c, Color color) {
+		this.color = color;
+		points[0] = a;
+		points[1] = b;
+		points[2] = c;
+	}
 
 	public Triangle(Point a, Point b, Point c) {
+		color = Color.GRAY;
 		points[0] = a;
 		points[1] = b;
 		points[2] = c;
@@ -14,6 +22,10 @@ public class Triangle {
 
 	public Point[] getPoints() {
 		return points;
+	}
+
+	public Color getColor() {
+		return color;
 	}
 
 	public Boolean shareVertice(Triangle triangle) {

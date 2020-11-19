@@ -42,7 +42,12 @@ public class Object3D {
 				if (elements[0].equals("v")) {
 					points.add(new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[2]), Double.parseDouble(elements[3])));
 				} else if (elements[0].equals("f")) {
-					faces.add(new Triangle(points.get(Integer.valueOf(elements[1])-1), points.get(Integer.valueOf(elements[2])-1), points.get(Integer.valueOf(elements[3])-1)));
+					if (elements.length == 4) {
+						faces.add(new Triangle(points.get(Integer.valueOf(elements[1])-1), points.get(Integer.valueOf(elements[2])-1), points.get(Integer.valueOf(elements[3])-1)));
+					} else if (elements.length == 5) {
+						faces.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1)));
+						faces.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1), points.get(Integer.valueOf(elements[4].split("/")[0])-1)));
+					}	
 				}
 			}
 			br.close();

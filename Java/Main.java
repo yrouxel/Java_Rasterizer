@@ -47,7 +47,7 @@ public class Main {
 		// Object3D obj = new Object3D(list);
 
 		Object3D obj = new Object3D();
-		obj.getObjectFromFile("teapot.obj");
+		obj.getObjectFromFile("Objects/WatchTower/wooden_watch_tower.obj");
 
 		new Projecter2D(obj);
 
