@@ -48,13 +48,10 @@ public class Main {
 
 		Object3D obj = new Object3D();
 		// obj.getObjectFromFile("Objects/WatchTower/wooden_watch_tower.obj");
-		obj.getObjectFromFile("Objects/doom_combat_scene/doom_combat_scene.obj");
+		// obj.getObjectFromFile("Objects/doom_combat_scene/doom_combat_scene.obj");
+		obj.getObjectFromFile("Objects/motorbike/bike.obj");
+		// obj.getObjectFromFile("Objects/borderlands_cosplay/borderlands_cosplay.obj");
 
 		new Projecter2D(obj);
-
-		// Point test = new Point(0, 1, 0);
-		// System.out.println(test);
-		// test.applyThetaRotation(Math.PI/2);
-		// System.out.println(test);
 	}
 }

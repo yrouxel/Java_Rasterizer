@@ -38,20 +38,17 @@ public class Vector {
 		z += v.z;
 	}
 
-	public void rotate(double theta, double phi) {
-        applyThetaRotation(theta);
-        applyPhiRotation(phi);
+    public void rotate(double theta, double phi) {
+        double xBefore = x;
+
+        //theta rotation
+        x = xBefore*Math.cos(theta) + y*Math.sin(theta);
+        double yBefore = y*Math.cos(theta) - xBefore*Math.sin(theta);
+
+        //phi rotation
+        y = yBefore*Math.cos(phi) + z*Math.sin(phi);
+        z = z*Math.cos(phi) - yBefore*Math.sin(phi);
     }
-
-	public void applyThetaRotation(double theta) {
-        x = x*Math.cos(theta) + y*Math.sin(theta);
-        y = y*Math.cos(theta) - x*Math.sin(theta);
-	}
-
-	public void applyPhiRotation(double phi) {
-        y = y*Math.cos(phi) + z*Math.sin(phi);
-        z = z*Math.cos(phi) - y*Math.sin(phi);
-	}
 	
 	public double getNorm() {
         return Math.sqrt(x*x + y*y + z*z);

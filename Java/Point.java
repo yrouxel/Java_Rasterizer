@@ -42,6 +42,25 @@ public class Point {
         return pt;
     }
 
+    //same function with less function calls
+    public Point getPointNewBaseOptimized(Point camera, double theta, double phi) {
+        double x2 = x - camera.getX();
+        double y2 = y - camera.getY();
+        double z2 = z - camera.getZ();
+
+        double xBefore = x2;
+
+        //theta rotation
+        x2 = xBefore*Math.cos(theta) + y2*Math.sin(theta);
+        double yBefore = y2*Math.cos(theta) - xBefore*Math.sin(theta);
+
+        //phi rotation
+        y2 = yBefore*Math.cos(phi) + z2*Math.sin(phi);
+        z2 = z2*Math.cos(phi) - yBefore*Math.sin(phi);
+
+        return new Point(x2, y2, z2);
+    }
+
     public void substract(Point pt) {
         x -= pt.x;
         y -= pt.y;
