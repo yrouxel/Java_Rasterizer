@@ -15,7 +15,7 @@ public class Projecter2D extends JFrame {
 
 	private BufferedImage monBuf; // buffer d’affichage
 	private Point cameraP = new Point(0, 0, 10);
-	private Point lightingP = new Point(0, 0, 10);
+	private Point lightingP = new Point(0, 0, -500);
 
 	private double cameraTheta = 0;
 	private double cameraPhi = 0;
@@ -24,6 +24,13 @@ public class Projecter2D extends JFrame {
 	private double sinTheta;
 	private double cosPhi;
 	private double sinPhi;
+
+	private int[] xs = new int[3];
+	private int[] ys = new int[3];
+
+	private Point a;
+	private Point b;
+	private Point c;
 
 	private double alphaMax = Math.PI / 2;
 	private double focalDistance;
@@ -115,6 +122,7 @@ public class Projecter2D extends JFrame {
 		// }
 
 		for (Map.Entry<Double, Triangle> entry : depthTriangles.entrySet()) {
+			// drawTriangleWithMemory(g, entry.getValue());
 			drawTriangle(g, entry.getValue());
 		}
 	}
@@ -122,17 +130,14 @@ public class Projecter2D extends JFrame {
 
 	public void drawTriangle(Graphics g, Triangle tri) {
 		Vector normal = tri.getNormal();
-		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
+		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
 		normal.normalize();
 		lightToTriangle.normalize();
 		double shade = Math.max(-2.0 * normal.getScalarProduct(lightToTriangle), 0);
 
-		Point a = tri.getPoints()[0].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-		Point b = tri.getPoints()[1].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-		Point c = tri.getPoints()[2].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-
-		int[] xs = new int[3];
-		int[] ys = new int[3];
+		a = tri.getPoints()[0].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
+		b = tri.getPoints()[1].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
+		c = tri.getPoints()[2].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
 
 		xs[0] = a.get2DXTransformation(centerX, focalDistance);
 		xs[1] = b.get2DXTransformation(centerX, focalDistance);
@@ -163,9 +168,6 @@ public class Projecter2D extends JFrame {
 			tri.getPoints()[2].computeScreenCoordinates(cameraP, cameraTheta, cameraPhi, centerX, centerY, focalDistance);
 		}
 
-		int[] xs = new int[3];
-		int[] ys = new int[3];
-
 		xs[0] = tri.getPoints()[0].getX2D();
 		xs[1] = tri.getPoints()[1].getX2D();
 		xs[2] = tri.getPoints()[2].getX2D();
@@ -176,7 +178,7 @@ public class Projecter2D extends JFrame {
 
 		g.setColor(new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue()))));
 		g.fillPolygon(xs, ys, 3);
-	} */
+	}*/
 
 	public void drawGrid(Graphics g) {
 		g.setColor(Color.WHITE);
@@ -192,8 +194,6 @@ public class Projecter2D extends JFrame {
 	}
 
 	public void paint(Graphics g) {
-		System.out.println(System.currentTimeMillis() - startTime + " ms");
-		startTime = System.currentTimeMillis();
 		Prepaint(monBuf.getGraphics());
 		g.drawImage(monBuf, 0, 0, null);
 	}
@@ -203,7 +203,11 @@ public class Projecter2D extends JFrame {
 		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
 
 		sortTriangles();
+		System.out.println("SORT : " + (System.currentTimeMillis() - startTime) + " ms");
+		startTime = System.currentTimeMillis();
 		drawTriangles(g);
+		System.out.println("DRAW : " + (System.currentTimeMillis() - startTime) + " ms\n");
+		startTime = System.currentTimeMillis();
 
 		// displayComments(g);
 		// g.setColor(Color.WHITE);

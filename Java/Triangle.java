@@ -53,6 +53,10 @@ public class Triangle {
 		return g;
 	}
 
+	public Point getCenterOfGravityOptimized() {
+		return new Point((points[0].getX() + points[1].getX() + points[2].getX())/3.0, (points[0].getY() + points[1].getY() + points[2].getY())/3.0, (points[0].getZ() + points[1].getZ() + points[2].getZ())/3.0);
+	}
+
 	@Override
 	public String toString() {
 		return "Triangle [points=" + Arrays.toString(points) + "]";
