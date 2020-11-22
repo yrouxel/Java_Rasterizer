@@ -131,7 +131,7 @@ public class World {
 		if (chunk != null) {
 			chunk.addTriangle(tri);
 		} else {
-			chunk = new Chunk();
+			chunk = new Chunk(chunkPoint);
 			chunk.addTriangle(tri);
 			chunks.put(chunkPoint, chunk);
 		}

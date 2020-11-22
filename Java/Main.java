@@ -49,16 +49,20 @@ public class Main {
 		// Object3D obj = new Object3D(list);
 
 		Object3D obj = new Object3D();
-		obj.getObjectFromFile("Objects/teapot/teapot.obj");
+		// obj.getObjectFromFile("Objects/teapot/teapot.obj");
 		// obj.getObjectFromFile("Objects/WatchTower/wooden_watch_tower.obj");
+
+		// CHUNK SIZE = 10/20
 		// obj.getObjectFromFile("Objects/doom_combat_scene/doom_combat_scene.obj");
-		// obj.getObjectFromFile("Objects/motorbike/bike.obj");
+		
+		// CHUNK SIZE = 200
+		obj.getObjectFromFile("Objects/motorbike/bike.obj");
 		// obj.getObjectFromFile("Objects/borderlands_cosplay/borderlands_cosplay.obj");
 
 		System.out.println("ADDING OBJECT");
-		world.addObject2(obj);
+		world.addObject(obj);
 		System.out.println(world);
 
-		new Projecter2D(world, obj);
+		new Projecter2D(world);
 	}
 }
