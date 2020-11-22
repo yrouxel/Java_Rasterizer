@@ -54,7 +54,7 @@ public class World {
 		}
 	}*/
 
-	public void addObject2(Object3D obj) {
+	public void addObject(Object3D obj) {
 		Point chunkPoint1;
 		Point chunkPoint2;
 		Point chunkPoint3;
@@ -121,23 +121,6 @@ public class World {
 
 	public TreeMap<Point, Chunk> getChunks() {
 		return chunks;
-	}
-
-	public void addTriangleToChunk2(Point chunkPoint, Triangle tri) {
-		boolean found = false;
-
-		for (Map.Entry<Point, Chunk> entry : chunks.entrySet()) {
-			if (entry.getKey().equals(chunkPoint)) {
-				entry.getValue().addTriangle(tri);
-				found = true;
-			}
-		} 
-
-		if (!found) {
-			Chunk chunk = new Chunk();
-			chunk.addTriangle(tri);
-			chunks.put(chunkPoint, chunk);
-		}
 	}
 
 	public void addTriangleToChunk(Point chunkPoint, Triangle tri) {
