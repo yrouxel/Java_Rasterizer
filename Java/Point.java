@@ -1,4 +1,4 @@
-public class Point {
+public class Point implements Comparable {
     private double x, y, z;
     // private int x2D, y2D;
  
@@ -6,7 +6,13 @@ public class Point {
 		this.x = x;
 		this.y = y;
 		this.z = z; 
-	}
+    }
+    
+    public Point(Point clone) {
+        this.x = clone.x;
+        this.y = clone.y;
+        this.z = clone.z;
+    }
 
     public double getX() {
         return x;
@@ -34,6 +40,10 @@ public class Point {
 
     public Boolean equals(Point b) {
         return x == b.getX() && y == b.getY() && z == b.getZ();
+    }
+
+    public double getNorm() {
+        return Math.sqrt(x*x + y*y + z*z);
     }
 
     public Point getPointNewBase(Point camera, double theta, double phi) {
@@ -136,5 +146,49 @@ public class Point {
     @Override
     public String toString() {
         return "Point [x=" + x + ", y=" + y + ", z=" + z + "]";
+    }
+
+    /*@Override
+    public int compareTo(Object o) {
+        if (!(o instanceof Point)) {
+            return -1;
+        }
+        Point pt = (Point)o;
+        double norm = getNorm();
+        double normPt = pt.getNorm();
+        if (norm > normPt) {
+            return 1;
+        } else if (norm < normPt) {
+            return -1;
+        } else {
+            return 0;
+        }
+    }*/
+
+    @Override
+    public int compareTo(Object o) {
+        if (!(o instanceof Point)) {
+            return -1;
+        }
+        Point pt = (Point)o;
+        if (pt.getX() > x) {
+            return -1;
+        } else if (pt.getX() < x) {
+            return 1;
+        } else {
+            if (pt.getY() > y) {
+                return -1;
+            } else if (pt.getY() < y) {
+                return 1;
+            } else {
+                if (pt.getZ() > z) {
+                    return -1;
+                } else if (pt.getZ() < z) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+        }
     }
 }
