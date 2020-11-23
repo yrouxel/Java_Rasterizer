@@ -148,22 +148,6 @@ public class Point implements Comparable {
         return "Point [x=" + x + ", y=" + y + ", z=" + z + "]";
     }
 
-    /*@Override
-    public int compareTo(Object o) {
-        if (!(o instanceof Point)) {
-            return -1;
-        }
-        Point pt = (Point)o;
-        double norm = getNorm();
-        double normPt = pt.getNorm();
-        if (norm > normPt) {
-            return 1;
-        } else if (norm < normPt) {
-            return -1;
-        } else {
-            return 0;
-        }
-    }*/
 
     @Override
     public int compareTo(Object o) {
