@@ -3,6 +3,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
@@ -137,34 +138,28 @@ public class Projecter2D extends JFrame {
 		depthBufferChunks.clear();
 
 		for (Map.Entry<Double, Chunk> entry : depthChunks.descendingMap().entrySet()) {
-			if (isChunkVisible(entry.getValue().getCoord(), world.getChunkSize())) {
+			if (isChunkVisible(entry.getValue(), world.getChunkSize())) {
 				depthBufferChunks.put(entry.getKey(), entry.getValue());
 				drawChunkInDepthBuffer(g, entry.getValue());
 			}
 		}
 	}
 
-	public Boolean isChunkVisible(Point p, double chunkSize) {
-		Point frontLeft = new Point(p);
-		Point frontRight = new Point(p);
-		Point frontTopLeft = new Point(p);
-		Point frontTopRight = new Point(p);
-		Point backLeft = new Point(p);
-		Point backRight = new Point(p);
-		Point backTopLeft = new Point(p);
-		Point backTopRight = new Point(p);
+	public Boolean arePointsVisible(Point[] points) {
+		for (Point pt : points) {
+			pt.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
+			if (pt.get2DYTransformation(0, focalDistance) < centerY && Math.abs(pt.get2DXTransformation(0, focalDistance)) < centerX) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-		frontRight.add(new Point(chunkSize, 0, 0));
-		frontTopLeft.add(new Point(0, 0, chunkSize));
-		frontTopRight.add(new Point(chunkSize, 0, chunkSize));
-		backLeft.add(new Point(0, chunkSize, 0));
-		backRight.add(new Point(chunkSize, chunkSize, 0));
-		backTopLeft.add(new Point(0, chunkSize, chunkSize));
-		backTopRight.add(new Point(chunkSize, chunkSize, chunkSize));
-
-		int isVisible = isColorBlack(frontLeft) + isColorBlack(frontRight) + isColorBlack(frontTopLeft) + isColorBlack(frontTopRight) +
-		isColorBlack(backLeft) + isColorBlack(backRight) + isColorBlack(backTopLeft) + isColorBlack(backTopRight);
-
+	public Boolean isChunkVisible(Chunk chunk, double chunkSize) {
+		int isVisible = 0;
+		for (Point pt : chunk.getPoints(chunkSize)) {
+			isVisible += isColorBlack(pt);
+		}
 		if (isVisible == -8 || isVisible == 8) {
 			return false;
 		} else {
@@ -347,10 +342,9 @@ public class Projecter2D extends JFrame {
 		sinPhi = Math.sin(cameraPhi);
 
 		startTime = System.currentTimeMillis();
-		// sortChunks();
 
 		depthChunks.clear();
-		sortChunksRecursively(world.getBigChunks(), world.getChunkLevel());
+		sortChunksRecursively(world.getChunks(), world.getChunkLevel());
 
 		sortTime = System.currentTimeMillis() - startTime;
 		drawDepthBuffer(depthBuffer.getGraphics());
@@ -380,40 +374,21 @@ public class Projecter2D extends JFrame {
 		g.drawString("DRAW CHUNKS TIME : " + drawChunksTime + " ms", 20, 100);
 		g.drawString("REFRESH TIME : " + (System.currentTimeMillis() - startTime) + " ms", 20, 120);
 
-		g.drawString("TOTAL CHUNKS : " + world.getBigChunks().size() + " chunks\n", 20, 160);
+		g.drawString("TOTAL CHUNKS : " + world.getChunks().size() + " chunks\n", 20, 160);
 		g.drawString("CHUNK SORTING : " + depthChunks.size() + " chunks\n", 20, 180);
 		g.drawString("DISPLAYING : " + depthBufferChunks.size() + " chunks\n", 20, 200);
 	}
 
 	public void sortChunksRecursively(TreeMap<Point, Object> bigChunks, int chunkLevel) {
 		for (Map.Entry<Point, Object> entry : bigChunks.entrySet()) {
-			Point center = new Point(entry.getKey());
-			Point pt = new Point(1, 1, 1);
-			pt.multiply(world.getChunkSize()*Math.pow(world.getBiggerChunkSize(), chunkLevel - 1));
-			center.add(pt);
-			center = center.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-			if (Math.abs(center.get2DYTransformation(0, focalDistance)) < centerY && Math.abs(center.get2DXTransformation(0, focalDistance)) < centerX) {
+			Chunk chunk = (Chunk)entry.getValue();		
+
+			if (arePointsVisible(chunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1)))) {
 				if (chunkLevel == 1) {
-					depthChunks.put(new Vector(center, cameraP).getNorm(), (Chunk)entry.getValue());
+					depthChunks.put(new Vector(chunk.getMiddlePoint(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1)), cameraP).getNorm(), chunk);
 				} else {
-					sortChunksRecursively(((Chunk)entry.getValue()).getSmallerChunks(), chunkLevel - 1);
+					sortChunksRecursively(chunk.getSmallerChunks(), chunkLevel - 1);
 				}
-			}
-		}
-	}
-
-	public void sortChunks() {
-		depthChunks.clear();
-
-		for (Map.Entry<Point, Object> entry : world.getBigChunks().entrySet()) {
-			Point center = new Point(entry.getKey());
-			Point pt = new Point(1, 1, 1);
-			pt.multiply(world.getChunkSize()/2);
-			center.add(pt);
-			Vector cameraToChunk = new Vector(center, cameraP);
-			center = center.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-			if (Math.abs(center.get2DYTransformation(0, focalDistance)) < centerY && Math.abs(center.get2DXTransformation(0, focalDistance)) < centerX) {
-				depthChunks.put(cameraToChunk.getNorm(), (Chunk)entry.getValue());
 			}
 		}
 	}
@@ -423,13 +398,11 @@ public class Projecter2D extends JFrame {
 
 		for (Map.Entry<Point, Object> entry : chunk.getSmallerChunks().entrySet()) {
 			Triangle tri = (Triangle)entry.getValue();
-			Point center = tri.getCenterOfGravity();
-			Vector cameraToTriangle = new Vector(center, cameraP);
-			center = center.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-			// triangles must be facing towards the camera and in the fov
-			//triangles facing us should be the last condition in a real world, but here i'm displaying only one object
-			// second and third conditions are responsible for rare artifacts
-			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0 && Math.abs(center.get2DYTransformation(0, focalDistance)) < centerY && Math.abs(center.get2DXTransformation(0, focalDistance)) < centerX) {
+
+			Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
+
+			// object must be facing towards the camera and have at least one point in the fov
+			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0 && arePointsVisible(tri.getPoints())) {
 				depthTrianglesByChunk.put(cameraToTriangle.getNorm(), tri);
 			}
 		}

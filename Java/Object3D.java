@@ -3,24 +3,20 @@ import java.io.FileReader;
 import java.util.ArrayList;
 
 public class Object3D {
-	private ArrayList<Triangle> faces;
+	private ArrayList<Triangle> triangles;
 
-	public Object3D(ArrayList<Triangle> faces) {
-		this.faces = faces;
+	public Object3D(ArrayList<Triangle> triangles) {
+		this.triangles = triangles;
 	}
 
 	public Object3D() {
-		faces = new ArrayList<Triangle>();
+		triangles = new ArrayList<Triangle>();
 	}
 
-	// public void translate(Vector vec) {
-	// 	for 
-	// } 
-
 	public Boolean validObject() {
-		for (Triangle tri : faces) {
+		for (Triangle tri : triangles) {
 			int commonVertices = 0;
-			for (Triangle tri2 : faces) {
+			for (Triangle tri2 : triangles) {
 				if (tri.shareVertice(tri2)) {
 					commonVertices++;
 				}
@@ -44,10 +40,10 @@ public class Object3D {
 					points.add(new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[2]), Double.parseDouble(elements[3])));
 				} else if (elements[0].equals("f")) {
 					if (elements.length == 4) {
-						faces.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1)));
+						triangles.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1)));
 					} else if (elements.length == 5) {
-						faces.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1)));
-						faces.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1), points.get(Integer.valueOf(elements[4].split("/")[0])-1)));
+						triangles.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1)));
+						triangles.add(new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1), points.get(Integer.valueOf(elements[4].split("/")[0])-1)));
 					}	
 				}
 			}
@@ -60,7 +56,7 @@ public class Object3D {
 
 	}
 
-	public ArrayList<Triangle> getFaces() {
-		return faces;
+	public ArrayList<Triangle> getTriangles() {
+		return triangles;
 	}
 }

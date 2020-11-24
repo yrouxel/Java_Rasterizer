@@ -62,6 +62,7 @@ public class Main {
 
 		System.out.println("ADDING OBJECT");
 		world.addObjectToWorld(obj);
+
 		new Projecter2D(world);
 	}
 }
