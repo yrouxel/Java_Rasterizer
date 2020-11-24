@@ -3,7 +3,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
@@ -16,6 +15,7 @@ public class Projecter2D extends JFrame {
 
 	private BufferedImage imageBuffer;// buffer d’affichage
 	private BufferedImage depthBuffer; // buffer d’affichage
+	
 	private boolean drawingImage = true;
 	private boolean displayingDebug = false;
 	private boolean displayingChunks = false;
@@ -42,9 +42,6 @@ public class Projecter2D extends JFrame {
 
 	private double alphaMax = Math.PI / 2;
 	private double focalDistance;
-
-	private int space = 20;
-	private Grid grid = new Grid(space);
 
 	private World world;
 
@@ -131,6 +128,13 @@ public class Projecter2D extends JFrame {
 		}
 	}
 
+	public void drawWithoutDepthBuffer(Graphics g) {
+		for (Map.Entry<Double, Chunk> entry : depthChunks.entrySet()) {
+			sortTrianglesInChunk(entry.getValue());
+			drawTriangles(g);
+		}
+	}
+
 	public void drawDepthBuffer(Graphics g) {
 		g.setColor(Color.BLACK);
 		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
@@ -138,7 +142,7 @@ public class Projecter2D extends JFrame {
 		depthBufferChunks.clear();
 
 		for (Map.Entry<Double, Chunk> entry : depthChunks.descendingMap().entrySet()) {
-			if (isChunkVisible(entry.getValue(), world.getChunkSize())) {
+			if (isChunkHidden(entry.getValue(), world.getChunkSize())) {
 				depthBufferChunks.put(entry.getKey(), entry.getValue());
 				drawChunkInDepthBuffer(g, entry.getValue());
 			}
@@ -147,15 +151,15 @@ public class Projecter2D extends JFrame {
 
 	public Boolean arePointsVisible(Point[] points) {
 		for (Point pt : points) {
-			pt.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-			if (pt.get2DYTransformation(0, focalDistance) < centerY && Math.abs(pt.get2DXTransformation(0, focalDistance)) < centerX) {
+			Point ptNewBase = pt.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
+			if (Math.abs(ptNewBase.get2DYTransformation(0, focalDistance)) < centerY && Math.abs(ptNewBase.get2DXTransformation(0, focalDistance)) < centerX) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	public Boolean isChunkVisible(Chunk chunk, double chunkSize) {
+	public Boolean isChunkHidden(Chunk chunk, double chunkSize) {
 		int isVisible = 0;
 		for (Point pt : chunk.getPoints(chunkSize)) {
 			isVisible += isColorBlack(pt);
@@ -217,7 +221,7 @@ public class Projecter2D extends JFrame {
 		if (displayingChunks) {
 			g.setColor(Color.WHITE);
 			for (Map.Entry<Double, Chunk> entry : depthBufferChunks.entrySet()) {
-				drawBoundaries(g, entry.getValue().getCoord(), world.getChunkSize());
+				drawBoundaries(g, entry.getValue().getPoints(world.getChunkSize()));
 			}
 		}
 	}
@@ -279,48 +283,21 @@ public class Projecter2D extends JFrame {
 		g.fillPolygon(xs, ys, 3);
 	}*/
 
-	public void drawBoundaries(Graphics g, Point p, double chunkSize) {
-		Point frontRight = new Point(p);
-		Point frontTopLeft = new Point(p);
-		Point frontTopRight = new Point(p);
-		Point backLeft = new Point(p);
-		Point backRight = new Point(p);
-		Point backTopLeft = new Point(p);
-		Point backTopRight = new Point(p);
+	public void drawBoundaries(Graphics g, Point[] points) {
+		drawLine(g, points[0], points[1]);
+		drawLine(g, points[2], points[3]);
+		drawLine(g, points[4], points[5]);
+		drawLine(g, points[6], points[7]);
 
-		frontRight.add(new Point(chunkSize, 0, 0));
-		frontTopLeft.add(new Point(0, 0, chunkSize));
-		frontTopRight.add(new Point(chunkSize, 0, chunkSize));
-		backLeft.add(new Point(0, chunkSize, 0));
-		backRight.add(new Point(chunkSize, chunkSize, 0));
-		backTopLeft.add(new Point(0, chunkSize, chunkSize));
-		backTopRight.add(new Point(chunkSize, chunkSize, chunkSize));
+		drawLine(g, points[0], points[2]);
+		drawLine(g, points[1], points[3]);
+		drawLine(g, points[4], points[6]);
+		drawLine(g, points[5], points[7]);
 
-		drawLine(g, p, frontRight);
-		drawLine(g, p, frontTopLeft);
-		drawLine(g, frontTopLeft, frontTopRight);
-		drawLine(g, frontTopRight, frontRight);
-		drawLine(g, backLeft, backRight);
-		drawLine(g, backLeft, backTopLeft);
-		drawLine(g, backTopLeft, backTopRight);
-		drawLine(g, backTopRight, backRight);
-		drawLine(g, p, backLeft);
-		drawLine(g, frontTopLeft, backTopLeft);
-		drawLine(g, frontTopRight, backTopRight);
-		drawLine(g, frontRight, backRight);
-	}
-
-	public void drawGrid(Graphics g) {
-		g.setColor(Color.WHITE);
-		for (Point point : grid.getPoints()) {
-			Point topPoint   = new Point(point.getX(), point.getY(), point.getZ() + space);
-			Point backPoint  = new Point(point.getX(), point.getY() + space, point.getZ());
-			Point rightPoint = new Point(point.getX() + space, point.getY(), point.getZ());
-
-			drawLine(g, point, topPoint);
-			drawLine(g, point, backPoint);
-			drawLine(g, point, rightPoint);
-		}
+		drawLine(g, points[0], points[4]);
+		drawLine(g, points[1], points[5]);
+		drawLine(g, points[2], points[6]);
+		drawLine(g, points[3], points[7]);
 	}
 
 	public void paint(Graphics g) {
@@ -347,6 +324,7 @@ public class Projecter2D extends JFrame {
 		sortChunksRecursively(world.getChunks(), world.getChunkLevel());
 
 		sortTime = System.currentTimeMillis() - startTime;
+		// drawWithoutDepthBuffer(g);
 		drawDepthBuffer(depthBuffer.getGraphics());
 		drawDepthBufferTime = System.currentTimeMillis() - startTime - sortTime;
 		drawChunks(g);
@@ -385,7 +363,7 @@ public class Projecter2D extends JFrame {
 
 			if (arePointsVisible(chunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1)))) {
 				if (chunkLevel == 1) {
-					depthChunks.put(new Vector(chunk.getMiddlePoint(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1)), cameraP).getNorm(), chunk);
+					depthChunks.put(new Vector(chunk.getCenter(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1)), cameraP).getNorm(), chunk);
 				} else {
 					sortChunksRecursively(chunk.getSmallerChunks(), chunkLevel - 1);
 				}

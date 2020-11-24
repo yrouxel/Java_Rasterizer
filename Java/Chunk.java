@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.TreeMap;
 
 public class Chunk{
@@ -33,7 +32,7 @@ public class Chunk{
 		return points;
 	}
 
-	public Point getMiddlePoint(double chunkSize) {
+	public Point getCenter(double chunkSize) {
 		Point center = new Point(coord);
 		Point pt = new Point(1, 1, 1);
 		pt.multiply(chunkSize/2);
