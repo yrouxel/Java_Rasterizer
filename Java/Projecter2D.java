@@ -33,13 +33,6 @@ public class Projecter2D extends JFrame {
 	private double cosPhi;
 	private double sinPhi;
 
-	private int[] xs = new int[3];
-	private int[] ys = new int[3];
-
-	private Point a;
-	private Point b;
-	private Point c;
-
 	private double alphaMax = Math.PI / 2;
 	private double focalDistance;
 
@@ -227,18 +220,15 @@ public class Projecter2D extends JFrame {
 	}
 
 	public void drawTriangle(Graphics g, Triangle tri) {
-		a = tri.getPoints()[0].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-		b = tri.getPoints()[1].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-		c = tri.getPoints()[2].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
+		int[] xs = new int[3];
+		int[] ys = new int[3];
 
-		xs[0] = a.get2DXTransformation(centerX, focalDistance);
-		xs[1] = b.get2DXTransformation(centerX, focalDistance);
-		xs[2] = c.get2DXTransformation(centerX, focalDistance);
-
-		ys[0] = a.get2DYTransformation(centerY, focalDistance);
-		ys[1] = b.get2DYTransformation(centerY, focalDistance);
-		ys[2] = c.get2DYTransformation(centerY, focalDistance);
-
+		Point ptNewBase;
+		for (int i = 0; i < 3; i++) {
+			ptNewBase = tri.getPoints()[i].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
+			xs[i] = ptNewBase.get2DXTransformation(centerX, focalDistance);
+			ys[i] = ptNewBase.get2DYTransformation(centerY, focalDistance);
+		}
 		g.fillPolygon(xs, ys, 3);
 	}
 
