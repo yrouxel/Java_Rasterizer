@@ -11,7 +11,7 @@ public class World {
 	public void addObjectToWorld(Object3D obj) {
 		addObject2(obj);
 		addChunksToChunks();
-		// System.out.println("TRIANGLE COUNT : " + countTriangles(0, chunkLevels, chunks));
+		System.out.println("TRIANGLE COUNT : " + countTriangles(0, chunkLevels, chunks));
 		// checkType(chunks, chunkLevels);
 		// countChunkLevels(chunks, chunkLevels);
 	}
@@ -68,37 +68,38 @@ public class World {
 			chunkLevels++;
 			TreeMap<Point, Object> biggerChunks = new TreeMap<Point, Object>();
 			for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
-				addObjectToChunk(chunkLevels, chunkLevels, entry.getKey(), biggerChunks, entry.getValue());
+				addObjectToChunk(chunkLevels, chunkLevels, entry.getKey(), biggerChunks, entry.getKey(), entry.getValue());
 			}
 			chunks = biggerChunks;
 			addChunksToChunks();
 		}
 	}
 
-	public void addObjectToChunk(int currentChunkLevel, int destinationChunkLevel, Point pt, TreeMap<Point, Object> subChunks, Object obj) {
+	public void addObjectToChunk(int currentChunkLevel, int destinationChunkLevel, Point pt, TreeMap<Point, Object> subChunks, Point key, Object obj) {
 		Point chunkPoint = getChunkPoint(pt, chunkSize * Math.pow(biggerChunkSize, currentChunkLevel-1));
 
 		Chunk smallerChunk = (Chunk)subChunks.get(chunkPoint);
 
 		if (destinationChunkLevel == currentChunkLevel) {
 			if (smallerChunk != null) {
-				smallerChunk.getSmallerChunks().put(pt, obj);
+				smallerChunk.getSmallerChunks().put(key, obj);
 			} else {
 				smallerChunk = new Chunk(chunkPoint);
-				smallerChunk.getSmallerChunks().put(pt, obj);
+				smallerChunk.getSmallerChunks().put(key, obj);
 				subChunks.put(chunkPoint, smallerChunk);
 			}
 		} else {
 			if (smallerChunk != null) {
-				addObjectToChunk(currentChunkLevel - 1, destinationChunkLevel, pt, smallerChunk.getSmallerChunks(), obj);
+				addObjectToChunk(currentChunkLevel - 1, destinationChunkLevel, pt, smallerChunk.getSmallerChunks(), key, obj);
 			} else {
 				smallerChunk = new Chunk(chunkPoint);
 				subChunks.put(chunkPoint, smallerChunk);
-				addObjectToChunk(currentChunkLevel - 1, destinationChunkLevel, pt, smallerChunk.getSmallerChunks(), obj);
+				addObjectToChunk(currentChunkLevel - 1, destinationChunkLevel, pt, smallerChunk.getSmallerChunks(), key, obj);
 			}
 		}
 	}
 
+	/*
 	public void addObject(Object3D obj) {
 		Point chunkPoint1;
 		Point chunkPoint2;
@@ -137,7 +138,7 @@ public class World {
 				System.out.println("PROCESSED " + (triKProcessed * 100000) + " TRIANGLES");
 			}
 		}
-	}
+	}*/
 
 	public void addObject2(Object3D obj) {
 		int triProcessed = 0;
@@ -145,14 +146,16 @@ public class World {
 
 		System.out.println("TRIANGLE COUNT : " + obj.getTriangles().size());
 		for (Triangle tri : obj.getTriangles()) {
-			addObjectToChunk(chunkLevels, 1, tri.getCenterOfGravity(), chunks, tri);;
+			for (Point pt : tri.getPoints()) {
+				addObjectToChunk(chunkLevels, 1, pt, chunks, tri.getCenterOfGravity(), tri);;
 
-			triProcessed++;
-			if (triProcessed == 100000) {
-				// addChunksToChunks();
-				triProcessed = 0;
-				triKProcessed++;
-				System.out.println("PROCESSED " + (triKProcessed * 100000) + " TRIANGLES");
+				triProcessed++;
+				if (triProcessed == 100000) {
+					// addChunksToChunks();
+					triProcessed = 0;
+					triKProcessed++;
+					System.out.println("PROCESSED " + (triKProcessed * 100000) + " TRIANGLES");
+				}
 			}
 		}
 	}

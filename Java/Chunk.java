@@ -14,6 +14,7 @@ public class Chunk{
 		return coord;
 	}
 
+	/** takes the size of the chunk, returns all 8 corners */
 	public Point[] getPoints(double chunkSize) {
 		Point[] points = new Point[8];
 
@@ -32,6 +33,7 @@ public class Chunk{
 		return points;
 	}
 
+	/** takes the size of the chunk, returns its middle point */
 	public Point getCenter(double chunkSize) {
 		Point center = new Point(coord);
 		Point pt = new Point(1, 1, 1);
