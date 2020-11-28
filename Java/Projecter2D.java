@@ -42,13 +42,8 @@ public class Projecter2D extends JFrame {
 	private Boolean mouseLocked = false;
 
 	private long startTime;
-	private long sortTime;
-	private long drawChunksTime;
 
-	TreeMap<Double, Triangle> depthTrianglesByChunk = new TreeMap<Double, Triangle>(Collections.reverseOrder());
-	TreeMap<Double, Chunk> depthBufferChunks = new TreeMap<Double, Chunk>(Collections.reverseOrder());
-	TreeMap<Double, Chunk> depthChunks = new TreeMap<Double, Chunk>(Collections.reverseOrder());
-
+	TreeMap<Double, Chunk> chunksToDraw = new TreeMap<Double, Chunk>(Collections.reverseOrder());
 
 	public Projecter2D(World world) {
 		super("3D ENGINE");
@@ -82,16 +77,12 @@ public class Projecter2D extends JFrame {
 
 		setVisible(true);
 
-		imageBuffer = new BufferedImage(dim.width, dim.height, BufferedImage.TYPE_INT_RGB);
-
 		Timer t = new Timer(20, new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				repaint();
 			}
 		});
 		t.start();
-
-		startTime = System.currentTimeMillis();
 
 		focalDistance = dim.getHeight() / (2 * Math.tan(alphaMax / 2.0));
 		centerX = dim.getWidth()/2;
@@ -119,124 +110,113 @@ public class Projecter2D extends JFrame {
 		}
 	}
 
-	// public void drawWithoutDepthBuffer(Graphics g) {
-	// 	for (Map.Entry<Double, Chunk> entry : depthChunks.entrySet()) {
-	// 		sortTrianglesInChunk(entry.getValue());
-	// 		drawTriangles(g);
-	// 	}
-	// }
+	public void sortChunksAndDrawDepthBuffer(Graphics gDepthBuffer, Graphics gImage, TreeMap<Point, Object> chunks, int chunkLevel, double chunkSize) {
+		gDepthBuffer.setColor(Color.BLACK);
+		gDepthBuffer.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
+		gDepthBuffer.setColor(Color.WHITE);
 
-	public void drawDepthBuffer(Graphics g) {
-		g.setColor(Color.BLACK);
-		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
+		gImage.setColor(Color.BLACK);
+		gImage.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
 
-		depthBufferChunks.clear();
+		cosTheta = Math.cos(cameraTheta);
+		sinTheta = Math.sin(cameraTheta);
+		cosPhi = Math.cos(cameraPhi);
+		sinPhi = Math.sin(cameraPhi);
 
-		for (Map.Entry<Double, Chunk> entry : depthChunks.descendingMap().entrySet()) {
-			if (isChunkVisible(entry.getValue(), world.getChunkSize())) {
-				depthBufferChunks.put(entry.getKey(), entry.getValue());
-				drawChunkInDepthBuffer(g, entry.getValue());
-			}
-		}
+		chunksToDraw.clear();
+		drawDepthBufferAndSortRecursively(gDepthBuffer, gImage, chunks, chunkLevel, chunkSize);
+		drawChunks(gImage);
 	}
 
-	public void sortChunksAndDrawDepthBuffer(Graphics g, TreeMap<Point, Object> chunks, int chunkLevel) {
-		g.setColor(Color.BLACK);
-		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
-		depthBufferChunks.clear();
-		drawDepthBufferAndSortRecursively(g, world.getChunks(), world.getChunkLevel());
-	}
-
-	public void drawDepthBufferAndSortRecursively(Graphics g, TreeMap<Point, Object> chunks, int chunkLevel) {
-		// System.out.println("SIZE " + chunks.size());
-		double chunkSize = world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1);
+	public void drawDepthBufferAndSortRecursively(Graphics gDepthBuffer, Graphics gImage, TreeMap<Point, Object> chunks, int chunkLevel, double chunkSize) {
 		TreeMap<Double, Chunk> sortedChunks = sortChunks(chunks, chunkSize);
+
 		for (Map.Entry<Double, Chunk> entry : sortedChunks.entrySet()) {
 			Chunk chunk = entry.getValue();
-			// System.out.println(isScreenBlack());
+			if (chunkLevel == 1) {
+				for (Map.Entry<Double, Triangle> triangle : sortTrianglesInChunk(chunk).entrySet()) {
+					drawTriangle(gDepthBuffer, triangle.getValue());
+				}
+				chunksToDraw.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
+			} else {
+				drawDepthBufferAndSortRecursively(gDepthBuffer, gImage, chunk.getSmallerChunks(), chunkLevel - 1, chunkSize / 2);
+			} 
+		}
+	}
+
+	public TreeMap<Double, Chunk> sortChunks(TreeMap<Point, Object> chunks, double chunkSize) {
+		TreeMap<Double, Chunk> depthChunks = new TreeMap<Double, Chunk>();
+		for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
+			Chunk chunk = (Chunk)entry.getValue();
 			if (isChunkVisible(chunk, chunkSize)) {
-				// System.out.println(chunk + " VISIBLE CHUNK LEVEL " + chunkLevel);
-				// System.out.println("IM HERE HELLO");
-				if (chunkLevel == 1) {
-					drawChunkInDepthBuffer(g, chunk);
-					depthBufferChunks.put(entry.getKey(), chunk);
-					// if (isChunkVisible(chunk, chunkSize)) {
-					// 	System.out.println(chunk + " VISIBLE CHUNK LEVEL " + chunkLevel);
-					// }
-				} else {
-					drawDepthBufferAndSortRecursively(g, chunk.getSmallerChunks(), chunkLevel - 1);
-				} 
+				depthChunks.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
 			}
 		}
+		return depthChunks;
 	}
 
-	/** returns true if at least one point is in FOV, false otherwise */
-	public Boolean arePointsVisible(Point[] points) {
-		for (Point pt : points) {
-			Point ptNewBase = pt.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-			if (ptNewBase.getY() > 0 && Math.abs(ptNewBase.get2DYTransformation(0, focalDistance)) < centerY && Math.abs(ptNewBase.get2DXTransformation(0, focalDistance)) < centerX) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/** returns true if at least one corner is visible, false otherwise*/
-	public Boolean isChunkVisible(Chunk chunk, double chunkSize) {
-		for (Point pt : chunk.getPoints(chunkSize)) {
-			if (isColorBlack(pt)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/** returns true if the pixel is black, 1 if white or out of range*/
-	public Boolean isColorBlack(Point pt) {
-		pt = pt.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-		int x = pt.get2DXTransformation(centerX, focalDistance);
-		int y = pt.get2DYTransformation(centerY, focalDistance);
-		if (x >= 0 && x < dim.getWidth() && y >= 0 && y < dim.getHeight() && new Color(depthBuffer.getRGB(x, y)).equals(Color.BLACK)) {
-			return true;
-		}
-		return false;
-	}
-
-	public void drawChunkInDepthBuffer(Graphics g, Chunk chunk) {
-		// System.out.println("IM HERE");
-		g.setColor(Color.WHITE);
+	public TreeMap<Double, Triangle> sortTrianglesInChunk(Chunk chunk) {
+		TreeMap<Double, Triangle> triangles = new TreeMap<Double, Triangle>();
 
 		for (Map.Entry<Point, Object> entry : chunk.getSmallerChunks().entrySet()) {
 			Triangle tri = (Triangle)entry.getValue();
-			if (tri.getNormal().getScalarProduct(new Vector(tri.getCenterOfGravity(), cameraP)) < 0) {
-				drawTriangle(g, tri);
+			Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
+
+			// object must be facing towards the camera
+			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0) {
+				triangles.put(cameraToTriangle.getNorm(), tri);
 			}
 		}
+		return triangles;
 	}
 
-	public void drawTriangles(Graphics g) {
-		// for (Map.Entry<Double, Triangle> entry : depthTriangles.entrySet()) {
-		// 	Point[] points = entry.getValue().getPoints();
-		// 	points[0].eraseScreenCoordinates();
-		// 	points[1].eraseScreenCoordinates();
-		// 	points[2].eraseScreenCoordinates();
-		// }
+	/** checks every pixel in a box containing the 2D view of the chunk, returns true if there's at least one black pixel, true otherwise */
+	public Boolean isChunkVisible(Chunk chunk, double chunkSize) {
+		int xMin = (int)dim.getWidth() + 1;
+		int xMax = -1;
+		int yMin = (int)dim.getHeight() + 1;
+		int yMax = -1;
 
-		for (Map.Entry<Double, Triangle> entry : depthTrianglesByChunk.entrySet()) {
-			// drawTriangleWithMemory(g, entry.getValue());
-			drawTriangleWithShade(g, entry.getValue());
+		for (Point pt : chunk.getPoints(chunkSize)) {
+			pt = pt.getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
+			int x = pt.get2DXTransformation(centerX, focalDistance);
+			int y = pt.get2DYTransformation(centerY, focalDistance);
+
+			xMin = Math.min(xMin, x);
+			xMax = Math.max(xMax, x);
+			yMin = Math.min(yMin, y);
+			yMax = Math.max(yMax, y);
 		}
+
+		if (xMax < 0 || xMin > dim.getWidth() || yMax < 0 || yMin > dim.getHeight()) {
+			return false;
+		}
+
+		xMin = Math.max(0, xMin);
+		xMax = Math.min((int)dim.getWidth(), xMax);
+		yMin = Math.max(0, yMin);
+		yMax = Math.min((int)dim.getHeight(), yMax);
+
+		for (int i = xMin; i < xMax; i++) {
+			for (int j = yMin; j < yMax; j++) {
+				if (new Color(depthBuffer.getRGB(i, j)).equals(Color.BLACK)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public void drawChunks(Graphics g) {
-		for (Map.Entry<Double, Chunk> entry : depthBufferChunks.entrySet()) {
-			sortTrianglesInChunk(entry.getValue());
-			drawTriangles(g);
+		for (Map.Entry<Double, Chunk> entry : chunksToDraw.entrySet()) {
+			for (Map.Entry<Double, Triangle> triangle : sortTrianglesInChunk(entry.getValue()).entrySet()) {
+				drawTriangleWithShade(g, triangle.getValue());
+			}
 		}
 
 		if (displayingChunks) {
 			g.setColor(Color.WHITE);
-			for (Map.Entry<Double, Chunk> entry : depthBufferChunks.entrySet()) {
+			for (Map.Entry<Double, Chunk> entry : chunksToDraw.entrySet()) {
 				drawBoundaries(g, entry.getValue().getPoints(world.getChunkSize()));
 			}
 		}
@@ -322,21 +302,8 @@ public class Projecter2D extends JFrame {
 	}
 	
 	public void Prepaint(Graphics g) {
-		g.setColor(Color.BLACK);
-		g.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
-
-		cosTheta = Math.cos(cameraTheta);
-		sinTheta = Math.sin(cameraTheta);
-		cosPhi = Math.cos(cameraPhi);
-		sinPhi = Math.sin(cameraPhi);
-
 		startTime = System.currentTimeMillis();
-
-		sortChunksAndDrawDepthBuffer(depthBuffer.getGraphics(), world.getChunks(), world.getChunkLevel());
-		sortTime = System.currentTimeMillis() - startTime;
-
-		drawChunks(g);
-		drawChunksTime = System.currentTimeMillis() - startTime - sortTime;
+		sortChunksAndDrawDepthBuffer(depthBuffer.getGraphics(), imageBuffer.getGraphics(), world.getChunks(), world.getChunkLevel(), world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), world.getChunkLevel()-1));
 
 		if (displayingDebug) {
 			if (drawingImage) {
@@ -354,52 +321,8 @@ public class Projecter2D extends JFrame {
 		Point movement = new Point(0, 100, 0);
 		movement.rotate(-cameraTheta, -cameraPhi);
 		g.drawString("(" + ((double)(int)movement.getX()/100) + ", " + ((double)(int)movement.getY()/100) + ", " + ((double)(int)movement.getZ()/100) + ")", 20, 40);
-
-		g.drawString("SORT TIME : " + sortTime + " ms", 20, 60);
-		g.drawString("DRAW CHUNKS TIME : " + drawChunksTime + " ms", 20, 80);
-		g.drawString("REFRESH TIME : " + (System.currentTimeMillis() - startTime) + " ms", 20, 100);
-
-		g.drawString("DISPLAYING : " + depthBufferChunks.size() + " chunks\n", 20, 120);
-	}
-
-	public void sortChunksRecursively(TreeMap<Point, Object> bigChunks, int chunkLevel) {
-		for (Map.Entry<Point, Object> entry : bigChunks.entrySet()) {
-			Chunk chunk = (Chunk)entry.getValue();		
-
-			if (arePointsVisible(chunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1)))) {
-				if (chunkLevel == 1) {
-					depthChunks.put(new Vector(chunk.getCenter(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunkLevel-1)), cameraP).getNorm(), chunk);
-				} else {
-					sortChunksRecursively(chunk.getSmallerChunks(), chunkLevel - 1);
-				}
-			}
-		}
-	}
-
-	public TreeMap<Double, Chunk> sortChunks(TreeMap<Point, Object> chunks, double chunkSize) {
-		TreeMap<Double, Chunk> depthChunks = new TreeMap<Double, Chunk>();
-		for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
-			Chunk chunk = (Chunk)entry.getValue();
-			if (arePointsVisible(chunk.getPoints(chunkSize))) {
-				depthChunks.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
-			}
-		}
-		return depthChunks;
-	}
-
-	public void sortTrianglesInChunk(Chunk chunk) {
-		depthTrianglesByChunk.clear();
-
-		for (Map.Entry<Point, Object> entry : chunk.getSmallerChunks().entrySet()) {
-			Triangle tri = (Triangle)entry.getValue();
-
-			Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
-
-			// object must be facing towards the camera and have at least one point in the fov
-			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0 && arePointsVisible(tri.getPoints())) {
-				depthTrianglesByChunk.put(cameraToTriangle.getNorm(), tri);
-			}
-		}
+		g.drawString("REFRESH TIME : " + (System.currentTimeMillis() - startTime) + " ms", 20, 60);
+		g.drawString("DISPLAYING : " + chunksToDraw.size() + " chunks\n", 20, 80);
 	}
 
 	public class MoveKeyListener implements KeyListener {
