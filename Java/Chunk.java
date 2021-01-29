@@ -2,16 +2,22 @@ import java.util.TreeMap;
 
 public class Chunk{
 	private Point coord;
+	private int chunkLevel;
 	private TreeMap<Point, Object> smallerChunks = new TreeMap<Point, Object>();
 
 	public Chunk() {}
 
-	public Chunk(Point coord) {
+	public Chunk(Point coord, int chunkLevel) {
 		this.coord = coord;
+		this.chunkLevel = chunkLevel;
 	}
 
 	public Point getCoord() {
 		return coord;
+	}
+
+	public int getChunkLevel() {
+		return chunkLevel;
 	}
 
 	/** takes the size of the chunk, returns all 8 corners */
@@ -45,5 +51,9 @@ public class Chunk{
 
 	public TreeMap<Point, Object> getSmallerChunks() {
 		return smallerChunks;
+	}
+
+	public void setSmallerChunks(TreeMap<Point, Object> smallerChunks) {
+		this.smallerChunks = smallerChunks;
 	}
 }

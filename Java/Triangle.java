@@ -3,6 +3,8 @@ import java.awt.*;
 
 public class Triangle {
 	private Point points[] = new Point[3];
+	private TexturePoint texturePoints[];
+	String texturePath;
 
 	private Color color;
 
@@ -20,8 +22,20 @@ public class Triangle {
 		points[2] = c;
 	}
 
+	public void addTextures(TexturePoint a, TexturePoint b, TexturePoint c, String texturePath) {
+		this.texturePath = texturePath;
+		texturePoints = new TexturePoint[3];
+		texturePoints[0] = a;
+		texturePoints[1] = b;
+		texturePoints[2] = c;
+	}
+
 	public Point[] getPoints() {
 		return points;
+	}
+
+	public TexturePoint[] getTexturePoints() {
+		return texturePoints;
 	}
 
 	public Color getColor() {
