@@ -1,3 +1,4 @@
+import java.util.Map;
 import java.util.TreeMap;
 
 public class Chunk{
@@ -5,11 +6,67 @@ public class Chunk{
 	private int chunkLevel;
 	private TreeMap<Point, Object> smallerChunks = new TreeMap<Point, Object>();
 
+	private Point centerOfGravity;
+	private Vector inverseNormal;
+	private double coneAngle;
+	private double totalArea;
+
 	public Chunk() {}
 
 	public Chunk(Point coord, int chunkLevel) {
 		this.coord = coord;
 		this.chunkLevel = chunkLevel;
+	}
+
+	/** computes an inverseNormale and a center of gravity (ponderated average)
+	 * if normal == 0, the surface is closed
+	 */
+	public void computeVisibilityCone() {
+		centerOfGravity = new Point();
+		inverseNormal = new Vector();
+		totalArea = 0;
+
+		if (chunkLevel == 1) {
+			for (Map.Entry<Point, Object> entry : smallerChunks.entrySet()) {
+				Triangle tri = (Triangle)entry.getValue();
+
+				Vector normale = tri.getNormal();
+				double area = normale.getNorm() / 2;
+				totalArea += area;
+
+				Point center = tri.getCenterOfGravity();
+				center.multiply(area);
+				centerOfGravity.add(center);
+				inverseNormal.add(normale);
+			}
+			centerOfGravity.multiply(1.0 / totalArea);
+			inverseNormal.multiply(-1);
+		} else {
+			for (Map.Entry<Point, Object> entry : smallerChunks.entrySet()) {
+				Chunk chunk = (Chunk)entry.getValue();
+
+				totalArea += chunk.getTotalArea();
+
+				Point center = new Point(chunk.getCenterOfGravity());
+				center.multiply(chunk.getTotalArea());
+				centerOfGravity.add(center);
+
+				inverseNormal.add(chunk.getInverseNormal());
+			}
+			centerOfGravity.multiply(1.0 / totalArea);
+		}
+	}
+	
+	public Point getCenterOfGravity() {
+		return centerOfGravity;
+	}
+
+	public Vector getInverseNormal() {
+		return inverseNormal;
+	}
+
+	public double getTotalArea() {
+		return totalArea;
 	}
 
 	public Point getCoord() {
@@ -41,12 +98,11 @@ public class Chunk{
 
 	/** takes the size of the chunk, returns its middle point */
 	public Point getCenter(double chunkSize) {
-		Point center = new Point(coord);
 		Point pt = new Point(1, 1, 1);
 		pt.multiply(chunkSize/2);
-		center.add(pt);
+		pt.add(coord);
 
-		return center;
+		return pt;
 	}
 
 	public TreeMap<Point, Object> getSmallerChunks() {

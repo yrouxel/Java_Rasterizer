@@ -1,6 +1,12 @@
 public class Point implements Comparable {
     private double x, y, z;
     // private int x2D, y2D;
+
+    public Point() {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
+    }
  
     public Point(double x, double y, double z) { 
 		this.x = x;
@@ -145,7 +151,7 @@ public class Point implements Comparable {
 
     @Override
     public String toString() {
-        return "Point [x=" + x + ", y=" + y + ", z=" + z + "]";
+        return "(x=" + x + ", y=" + y + ", z=" + z + ")";
     }
 
 

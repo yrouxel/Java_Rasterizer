@@ -1,6 +1,12 @@
 public class Vector {
 	private double x, y, z;
 
+	public Vector() {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
+    }
+
 	public Vector(double x, double y, double z) {
 		this.x = x;
 		this.y = y;
@@ -14,10 +20,13 @@ public class Vector {
 	}		
 
 	public void normalize() {
-		double norm = getNorm();
-		x = x/norm;
-		y = y/norm;
-		z = z/norm;
+		multiply(getNorm());
+	}
+
+	public void multiply(double d) {
+		x /= d;
+		y /= d;
+		z /= d;
 	}
 
 	public double getX() {
@@ -54,7 +63,7 @@ public class Vector {
         return Math.sqrt(x*x + y*y + z*z);
     }
 
-	public Vector getNormal(Vector b) {
+	public Vector getCrossProduct(Vector b) {
 		return new Vector(y*b.z - z*b.y, z*b.x - x*b.z, x*b.y - y*b.x);
 	}
 

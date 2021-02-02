@@ -2,7 +2,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class World {
-	private static double chunkSize = 0.1;
+	private static double chunkSize = 10;
 	private static int biggerChunkSize = 2;
 	private int chunkLevels = 1;
 
@@ -79,7 +79,6 @@ public class World {
 
 	public void addChunksToChunks() {
 		while (chunks.size() > 8) {
-			// System.out.println("CHUNK LEVEL " + chunkLevels + " CONTAINS : " + chunks.size() + " ELEMENTS");
 			chunkLevels++;
 			TreeMap<Point, Object> biggerChunks = new TreeMap<Point, Object>();
 			for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
@@ -99,7 +98,6 @@ public class World {
 				smallerChunk.getSmallerChunks().put(key, obj);
 			} else {
 				smallerChunk = new Chunk(chunkPoint, currentChunkLevel);
-
 				smallerChunk.getSmallerChunks().put(key, obj);
 				subChunks.put(chunkPoint, smallerChunk);
 			}
@@ -199,20 +197,9 @@ public class World {
 	// }
 
 	public Point getChunkPoint(Point pt, double chunkSize) {
-		int x, y, z;
-		x = (int)(pt.getX()/chunkSize);
-		y = (int)(pt.getY()/chunkSize);
-		z = (int)(pt.getZ()/chunkSize);
-
-		if (pt.getX() < 0) {
-			x--;
-		}
-		if (pt.getY() < 0) {
-			y--;
-		}
-		if (pt.getZ() < 0) {
-			z--;
-		}
+		double x = (int)Math.floor(pt.getX()/chunkSize);
+		double y = (int)Math.floor(pt.getY()/chunkSize);
+		double z = (int)Math.floor(pt.getZ()/chunkSize);
 
 		Point chunkPoint = new Point(x, y, z);
 		chunkPoint.multiply(chunkSize);

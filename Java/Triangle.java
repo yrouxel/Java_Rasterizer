@@ -55,7 +55,7 @@ public class Triangle {
 	}
 
 	public Vector getNormal() {
-		return new Vector(points[1], points[0]).getNormal(new Vector(points[2], points[1]));
+		return new Vector(points[1], points[0]).getCrossProduct(new Vector(points[2], points[1]));
 	}
 
 	public Point getCenterOfGravity() {
@@ -65,10 +65,6 @@ public class Triangle {
 		g.add(points[2]);
 		g.multiply(1.0/3.0);
 		return g;
-	}
-
-	public Point getCenterOfGravityOptimized() {
-		return new Point((points[0].getX() + points[1].getX() + points[2].getX())/3.0, (points[0].getY() + points[1].getY() + points[2].getY())/3.0, (points[0].getZ() + points[1].getZ() + points[2].getZ())/3.0);
 	}
 
 	@Override
