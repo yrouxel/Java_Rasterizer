@@ -116,40 +116,44 @@ public class Projecter2D extends JFrame {
 	}
 
 	public void sortChunksAndDrawDepthBuffer(Graphics gDepthBuffer, Graphics gImage, TreeMap<Point, Object> chunks, double chunkSize, double biggerChunkSize, int origineChunkLevel) {
-		TreeMap<Double, Chunk> sortedChunks = sortChunks(chunks, chunkSize, biggerChunkSize);
+		TreeMap<Double, Tuple<Chunk, Rectangle>> sortedChunks = sortChunks(chunks, chunkSize, biggerChunkSize);
 
-		for (Map.Entry<Double, Chunk> entry : sortedChunks.entrySet()) {
-			Chunk chunk = entry.getValue();
-			if (chunk.getChunkLevel() == 1) {
-				for (Map.Entry<Double, Triangle> triangle : sortTrianglesInChunk(chunk).entrySet()) {
-					drawTriangle(gDepthBuffer, triangle.getValue());
+		for (Map.Entry<Double, Tuple<Chunk, Rectangle>> entry : sortedChunks.entrySet()) {
+			if (isChunkVisible(entry.getValue().getY())) {
+				Chunk chunk = entry.getValue().getX();
+
+				if (chunk.getChunkLevel() == 1) {
+					for (Map.Entry<Double, Triangle> triangle : sortTrianglesInChunk(chunk).entrySet()) {
+						drawTriangle(gDepthBuffer, triangle.getValue());
+					}
+					chunksToDraw.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
+				} else {
+					sortChunksAndDrawDepthBuffer(gDepthBuffer, gImage, chunk.getSmallerChunks(), chunkSize, biggerChunkSize, chunk.getChunkLevel());
+				} 
+				if (debugMode == 1) {
+					if (chunk.getChunkLevel() == debugChunkLevel) {
+						debugChunksToDraw.add(chunk);
+					}
 				}
-				chunksToDraw.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
-			} else {
-				sortChunksAndDrawDepthBuffer(gDepthBuffer, gImage, chunk.getSmallerChunks(), chunkSize, biggerChunkSize, chunk.getChunkLevel());
-			} 
-			if (debugMode == 1) {
-				if (chunk.getChunkLevel() == debugChunkLevel) {
-					debugChunksToDraw.add(chunk);
+				if (debugMode == 2) {
+					if (origineChunkLevel > debugChunkLevel && chunk.getChunkLevel() <= debugChunkLevel) {
+						debugChunksToDraw.add(chunk);
+					}	
 				}
-			}
-			if (debugMode == 2) {
-				if (origineChunkLevel > debugChunkLevel && chunk.getChunkLevel() <= debugChunkLevel) {
-					debugChunksToDraw.add(chunk);
-				}	
 			}
 		}
 	}
 
 	/** returns a list of visible chunks sorted by distance to camera */
-	public TreeMap<Double, Chunk> sortChunks(TreeMap<Point, Object> chunks, double baseChunkSize, double biggerChunkSize) {
-		TreeMap<Double, Chunk> depthChunks = new TreeMap<Double, Chunk>();
+	public TreeMap<Double, Tuple<Chunk, Rectangle>> sortChunks(TreeMap<Point, Object> chunks, double baseChunkSize, double biggerChunkSize) {
+		TreeMap<Double, Tuple<Chunk, Rectangle>> depthChunks = new TreeMap<Double, Tuple<Chunk, Rectangle>>();
 		
 		for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
 			Chunk chunk = (Chunk)entry.getValue();
 			double chunkSize = baseChunkSize * Math.pow(biggerChunkSize, chunk.getChunkLevel()-1);
-			if (isChunkVisible(chunk, chunkSize)) {
-				depthChunks.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
+			Rectangle rect = getChunkProjectionBounds(chunk, chunkSize);
+			if (rect != null) {
+				depthChunks.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), new Tuple<Chunk, Rectangle>(chunk, rect));
 			}
 		}
 		return depthChunks;
@@ -172,7 +176,7 @@ public class Projecter2D extends JFrame {
 	}
 
 	/** checks every pixel in a box containing the 2D view of the chunk, returns true if there's at least one black pixel, true otherwise */
-	public Boolean isChunkVisible(Chunk chunk, double chunkSize) {
+	public Rectangle getChunkProjectionBounds(Chunk chunk, double chunkSize) {
 		int xMin = (int)dim.getWidth() + 1;
 		int xMax = -1;
 		int yMin = (int)dim.getHeight() + 1;
@@ -190,7 +194,7 @@ public class Projecter2D extends JFrame {
 		}
 
 		if (xMax < 0 || xMin > dim.getWidth() || yMax < 0 || yMin > dim.getHeight()) {
-			return false;
+			return null;
 		}
 
 		xMin = Math.max(0, xMin);
@@ -198,8 +202,12 @@ public class Projecter2D extends JFrame {
 		yMin = Math.max(0, yMin);
 		yMax = Math.min((int)dim.getHeight(), yMax);
 
-		for (int i = xMin; i < xMax; i++) {
-			for (int j = yMin; j < yMax; j++) {
+		return new Rectangle(xMin, xMax, yMin, yMax);
+	}
+
+	public Boolean isChunkVisible(Rectangle rect) {
+		for (int i = rect.getxMin(); i < rect.getxMax(); i++) {
+			for (int j = rect.getyMin(); j < rect.getyMax(); j++) {
 				if (new Color(depthBuffer.getRGB(i, j)).equals(Color.BLACK)) {
 					return true;
 				}
