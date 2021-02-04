@@ -77,6 +77,7 @@ public class World {
 		}
 	}
 
+	//** generates the pyramidal structure so that there is <8 chunks at the top */
 	public void addChunksToChunks() {
 		while (chunks.size() > 8) {
 			chunkLevels++;
@@ -88,8 +89,9 @@ public class World {
 		}
 	}
 
+	/** add an object to the given chunk level, creates its own container if necessary */
 	public void addObjectToChunk(int currentChunkLevel, int destinationChunkLevel, Point pt, TreeMap<Point, Object> subChunks, Point key, Object obj) {
-		Point chunkPoint = getChunkPoint(pt, chunkSize * Math.pow(biggerChunkSize, currentChunkLevel-1));
+		Point chunkPoint = computeChunkPoint(pt, chunkSize * Math.pow(biggerChunkSize, currentChunkLevel-1));
 
 		Chunk smallerChunk = (Chunk)subChunks.get(chunkPoint);
 
@@ -146,9 +148,9 @@ public class World {
 
 		System.out.println("TRIANGLE COUNT : " + obj.getTriangles().size());
 		for (Triangle tri : obj.getTriangles()) {
-			chunkPoint1 = getChunkPoint(tri.getPoints()[0], chunkSize);
-			chunkPoint2 = getChunkPoint(tri.getPoints()[1], chunkSize);
-			chunkPoint3 = getChunkPoint(tri.getPoints()[2], chunkSize);
+			chunkPoint1 = computeChunkPoint(tri.getPoints()[0], chunkSize);
+			chunkPoint2 = computeChunkPoint(tri.getPoints()[1], chunkSize);
+			chunkPoint3 = computeChunkPoint(tri.getPoints()[2], chunkSize);
 
 			if (chunkPoint1.equals(chunkPoint2)) {
 				if (chunkPoint1.equals(chunkPoint3)) {
@@ -176,27 +178,8 @@ public class World {
 		}
 	}
 
-	// public void addObject2(Object3D obj) {
-	// 	int triProcessed = 0;
-	// 	int triKProcessed = 0;
-
-	// 	System.out.println("TRIANGLE COUNT : " + obj.getTriangles().size());
-	// 	for (Triangle tri : obj.getTriangles()) {
-	// 		for (Point pt : tri.getPoints()) {
-	// 			addObjectToChunk(chunkLevels, 1, pt, chunks, tri.getCenterOfGravity(), tri);;
-
-	// 			triProcessed++;
-	// 			if (triProcessed == 100000) {
-	// 				// addChunksToChunks();
-	// 				triProcessed = 0;
-	// 				triKProcessed++;
-	// 				System.out.println("PROCESSED " + (triKProcessed * 100000) + " TRIANGLES");
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	public Point getChunkPoint(Point pt, double chunkSize) {
+	/** returns the coordinates of the chunk a point should be contained by */
+	public Point computeChunkPoint(Point pt, double chunkSize) {
 		double x = (int)Math.floor(pt.getX()/chunkSize);
 		double y = (int)Math.floor(pt.getY()/chunkSize);
 		double z = (int)Math.floor(pt.getZ()/chunkSize);
@@ -206,6 +189,8 @@ public class World {
 
 		return chunkPoint;
 	}
+
+	//---GETTERS---
 
 	public int getBiggerChunkSize() {
 		return biggerChunkSize;

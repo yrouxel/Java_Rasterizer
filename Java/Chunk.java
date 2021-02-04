@@ -1,6 +1,7 @@
 import java.util.Map;
 import java.util.TreeMap;
 
+/** base brick of the world, each chunk contains sub elements */
 public class Chunk{
 	private Point coord;
 	private int chunkLevel;
@@ -56,6 +57,8 @@ public class Chunk{
 			centerOfGravity.multiply(1.0 / totalArea);
 		}
 	}
+
+	//---GETTERS---
 	
 	public Point getCenterOfGravity() {
 		return centerOfGravity;
@@ -108,6 +111,8 @@ public class Chunk{
 	public TreeMap<Point, Object> getSmallerChunks() {
 		return smallerChunks;
 	}
+
+	//---SETTERS---
 
 	public void setSmallerChunks(TreeMap<Point, Object> smallerChunks) {
 		this.smallerChunks = smallerChunks;

@@ -11,8 +11,8 @@ import java.awt.*;
 
 public class Projecter2D extends JFrame {
 	private Dimension dim;
-	private double centerX;
-	private double centerY;
+	private int centerX;
+	private int centerY;
 
 	private BufferedImage imageBuffer;// buffer d’affichage
 	private BufferedImage depthBuffer; // buffer d’affichage
@@ -91,11 +91,13 @@ public class Projecter2D extends JFrame {
 		t.start();
 
 		focalDistance = dim.getHeight() / (2 * Math.tan(alphaMax / 2.0));
-		centerX = dim.getWidth()/2;
-		centerY = dim.getHeight()/2;
+		centerX = (int)dim.getWidth()/2;
+		centerY = (int)dim.getHeight()/2;
 
 		imageBuffer = new BufferedImage((int)dim.getWidth(), (int)dim.getHeight(), BufferedImage.TYPE_INT_RGB);
 		depthBuffer = new BufferedImage((int)dim.getWidth(), (int)dim.getHeight(), BufferedImage.TYPE_INT_RGB);
+
+		robot.mouseMove(centerX, centerY);
 	}
 
 	/** computes and draws the 2D screen projection of the line between 2 points */
@@ -115,9 +117,12 @@ public class Projecter2D extends JFrame {
 		}
 	}
 
+	/** determines recursively which chunks to draw */
 	public void sortChunksAndDrawDepthBuffer(Graphics gDepthBuffer, Graphics gImage, TreeMap<Point, Object> chunks, double chunkSize, double biggerChunkSize, int origineChunkLevel) {
+		//first condition : be in screen space
 		TreeMap<Double, Tuple<Chunk, Rectangle>> sortedChunks = sortChunks(chunks, chunkSize, biggerChunkSize);
 
+		//second condition : not be hidden behind other chunks
 		for (Map.Entry<Double, Tuple<Chunk, Rectangle>> entry : sortedChunks.entrySet()) {
 			if (isChunkVisible(entry.getValue().getY())) {
 				Chunk chunk = entry.getValue().getX();
@@ -129,13 +134,14 @@ public class Projecter2D extends JFrame {
 					chunksToDraw.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
 				} else {
 					sortChunksAndDrawDepthBuffer(gDepthBuffer, gImage, chunk.getSmallerChunks(), chunkSize, biggerChunkSize, chunk.getChunkLevel());
-				} 
+				}
+				
+				//debug modes
 				if (debugMode == 1) {
 					if (chunk.getChunkLevel() == debugChunkLevel) {
 						debugChunksToDraw.add(chunk);
 					}
-				}
-				if (debugMode == 2) {
+				} else if (debugMode == 2) {
 					if (origineChunkLevel > debugChunkLevel && chunk.getChunkLevel() <= debugChunkLevel) {
 						debugChunksToDraw.add(chunk);
 					}	
@@ -152,6 +158,8 @@ public class Projecter2D extends JFrame {
 			Chunk chunk = (Chunk)entry.getValue();
 			double chunkSize = baseChunkSize * Math.pow(biggerChunkSize, chunk.getChunkLevel()-1);
 			Rectangle rect = getChunkProjectionBounds(chunk, chunkSize);
+
+			//if rect is in screen space
 			if (rect != null) {
 				depthChunks.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), new Tuple<Chunk, Rectangle>(chunk, rect));
 			}
@@ -175,7 +183,7 @@ public class Projecter2D extends JFrame {
 		return triangles;
 	}
 
-	/** checks every pixel in a box containing the 2D view of the chunk, returns true if there's at least one black pixel, true otherwise */
+	/** returns a box containing the 2D view of the chunk if it is in screen space, null otherwise */
 	public Rectangle getChunkProjectionBounds(Chunk chunk, double chunkSize) {
 		int xMin = (int)dim.getWidth() + 1;
 		int xMax = -1;
@@ -205,6 +213,7 @@ public class Projecter2D extends JFrame {
 		return new Rectangle(xMin, xMax, yMin, yMax);
 	}
 
+	/** returns true if any pixel of the box isn't black */
 	public Boolean isChunkVisible(Rectangle rect) {
 		for (int i = rect.getxMin(); i < rect.getxMax(); i++) {
 			for (int j = rect.getyMin(); j < rect.getyMax(); j++) {
@@ -216,6 +225,7 @@ public class Projecter2D extends JFrame {
 		return false;
 	}
 
+	/** draws every chunk in the list */
 	public void drawChunks(Graphics g) {
 		for (Map.Entry<Double, Chunk> entry : chunksToDraw.entrySet()) {
 			for (Map.Entry<Double, Triangle> triangle : sortTrianglesInChunk(entry.getValue()).entrySet()) {
@@ -223,6 +233,7 @@ public class Projecter2D extends JFrame {
 			}
 		}
 
+		// debug options
 		if (debugMode != 0) {
 			g.setColor(Color.WHITE);
 			for (Chunk chunk : debugChunksToDraw) {
@@ -241,6 +252,7 @@ public class Projecter2D extends JFrame {
 		} 
 	}
 
+	/** draws a triangle */
 	public void drawTriangle(Graphics g, Triangle tri) {
 		int[] xs = new int[3];
 		int[] ys = new int[3];
@@ -253,6 +265,7 @@ public class Projecter2D extends JFrame {
 		g.fillPolygon(xs, ys, 3);
 	}
 
+	/** draws a triangle with shade computed with direction of light */
 	public void drawTriangleWithShade(Graphics g, Triangle tri) {
 		Vector normal = tri.getNormal();
 		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
@@ -265,6 +278,7 @@ public class Projecter2D extends JFrame {
 		drawTriangle(g, tri);
 	} 
 
+	/** draws a texture linearly on a triangle */
 	public void drawTriangleWithTexture(Graphics g, BufferedImage texture, Triangle tri) {
 		Vector normal = tri.getNormal();
 		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
@@ -330,40 +344,12 @@ public class Projecter2D extends JFrame {
 		  return (x1 - x3) * (y2 - y3) < (x2 - x3) * (y1 - y3);
 	}
 
+	/** checks if a given point is a triangle by a methode of cross products */
 	public boolean IsPointInTriangle(int xPt, int yPt, int x1, int y1, int x2, int y2, int x3, int y3){
 		return (getSign(xPt, yPt, x1, y1, x2, y2) && getSign(xPt, yPt, x2, y2, x3, y3) && getSign(xPt, yPt, x3, y3, x1, y1));
 	}
 
-
-	/*public void drawTriangleWithMemory(Graphics g, Triangle tri) {
-		Vector normal = tri.getNormal();
-		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
-		normal.normalize();
-		lightToTriangle.normalize();
-		double shade = Math.max(-2.0 * normal.getScalarProduct(lightToTriangle), 0);
-
-		if (tri.getPoints()[0].getX2D() == -1 && tri.getPoints()[0].getY2D() == -1) {
-			tri.getPoints()[0].computeScreenCoordinates(cameraP, cameraTheta, cameraPhi, centerX, centerY, focalDistance);
-		}
-		if (tri.getPoints()[1].getX2D() == -1 && tri.getPoints()[1].getY2D() == -1) {
-			tri.getPoints()[1].computeScreenCoordinates(cameraP, cameraTheta, cameraPhi, centerX, centerY, focalDistance);
-		}
-		if (tri.getPoints()[2].getX2D() == -1 && tri.getPoints()[2].getY2D() == -1) {
-			tri.getPoints()[2].computeScreenCoordinates(cameraP, cameraTheta, cameraPhi, centerX, centerY, focalDistance);
-		}
-
-		xs[0] = tri.getPoints()[0].getX2D();
-		xs[1] = tri.getPoints()[1].getX2D();
-		xs[2] = tri.getPoints()[2].getX2D();
-
-		ys[0] = tri.getPoints()[0].getY2D();
-		ys[1] = tri.getPoints()[1].getY2D();
-		ys[2] = tri.getPoints()[2].getY2D();
-
-		g.setColor(new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue()))));
-		g.fillPolygon(xs, ys, 3);
-	}*/
-
+	/** draws the box surrounding the chunk */
 	public void drawBoundaries(Graphics g, Point[] points) {
 		drawLine(g, points[0], points[1]);
 		drawLine(g, points[2], points[3]);
@@ -436,7 +422,7 @@ public class Projecter2D extends JFrame {
 		if (debugMode == 3) {
 			Point p = nextDisplayedChunk.getCoord();
 			g.drawString("CHUNK INFO : " + p, 20, 140);
-			g.drawString("CHUNK POINT : " + world.getChunkPoint(p, world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), nextDisplayedChunk.getChunkLevel())), 20, 160);
+			g.drawString("CHUNK POINT : " + world.computeChunkPoint(p, world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), nextDisplayedChunk.getChunkLevel())), 20, 160);
 		}
 	}
 
@@ -524,16 +510,13 @@ public class Projecter2D extends JFrame {
 	}
 
 	public class CameraMouseListener implements MouseMotionListener {
-		private int mouseX = (int)(dim.getWidth() / 2.0);
-		private int mouseY = (int)(dim.getHeight() / 2.0);
-
 		public void mouseDragged(MouseEvent e) {
 		}
 		public void mouseMoved(MouseEvent e) {
 			if (!mouseLocked) {
-				cameraTheta -= (e.getXOnScreen() - mouseX) * 2.0 * Math.PI/dim.getWidth();
-				cameraPhi   -= (e.getYOnScreen() - mouseY) * 2.0 * Math.PI/dim.getHeight();
-				robot.mouseMove(mouseX, mouseY);
+				cameraTheta -= (e.getXOnScreen() - centerX) * 2.0 * Math.PI/dim.getWidth();
+				cameraPhi   -= (e.getYOnScreen() - centerY) * 2.0 * Math.PI/dim.getHeight();
+				robot.mouseMove(centerX, centerY);
 			}
 		}
 	}
