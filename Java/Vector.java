@@ -1,4 +1,5 @@
 public class Vector {
+	private Point a, b;
 	private double x, y, z;
 
 	public Vector() {
@@ -14,10 +15,14 @@ public class Vector {
 	}
 
 	public Vector(Point p1,  Point p2) {
+		recreate(p1, p2);
+	}
+
+	public void recreate(Point p1,  Point p2) {
 		x = p1.getX() - p2.getX();
 		y = p1.getY() - p2.getY();
 		z = p1.getZ() - p2.getZ();
-	}		
+	}
 
 	public void normalize() {
 		multiply(getNorm());

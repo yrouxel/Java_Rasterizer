@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class Object3D {
 	private ArrayList<Triangle> triangles;
@@ -15,13 +17,13 @@ public class Object3D {
 
 	public Boolean validObject() {
 		for (Triangle tri : triangles) {
-			int commonVertices = 0;
+			int commonEdges = 0;
 			for (Triangle tri2 : triangles) {
-				if (tri.shareVertice(tri2)) {
-					commonVertices++;
+				if (tri.shareEdge(tri2)) {
+					commonEdges++;
 				}
 			}
-			if (commonVertices != 3) {
+			if (commonEdges != 3) {
 				return false;
 			}
 		}
@@ -43,6 +45,9 @@ public class Object3D {
 			String line;
 			while ((line = br.readLine()) != null) {
 				String[] elements = line.split(" ");
+				// if (elements[0].equals("#") && elements.length >= 3 && elements[2].equals("Edges")) {
+				// 	Edges = Integer.parseInt(elements[1]);
+				// } else 
 				if (elements[0].equals("v")) {
 					points.add(new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[2]), Double.parseDouble(elements[3])));
 				} else if (elements[0].equals("vt")) {
@@ -60,11 +65,65 @@ public class Object3D {
 			}
 			br.close();
 
+			System.out.println("OBJECT UPLOADED CONTAINS : " + triangles.size() + " TRIANGLES");
 		} catch (Exception e) {
 			System.out.println("INVALID OBJECT");
 			e.printStackTrace();
 		}
 
+	}
+
+	public TreeMap<Edge, ArrayList<Triangle>> generateEdges(ArrayList<Triangle> workableTriangles) {
+		TreeMap<Edge, ArrayList<Triangle>> edges = new TreeMap<Edge, ArrayList<Triangle>> ();
+
+		for (Triangle tri : workableTriangles) {
+			Point[] p = tri.getPoints();
+			for (int i = 0; i < 3; i++) {
+				Edge vert = new Edge(p[i], p[(i+1)%3]);
+
+				ArrayList<Triangle> list = edges.get(vert);
+				if (list == null) {
+					list = new ArrayList<Triangle>();
+				}
+				list.add(tri);
+				edges.put(vert, list);
+			}
+		}
+		return edges;
+	}
+
+	/** need to change Edges impacted by other Edges being removed */
+	public ArrayList<Triangle> computeEdgesReduction(TreeMap<Edge, ArrayList<Triangle>> edges, double ratioReduction) {
+		ArrayList<Triangle> triangle = new ArrayList<Triangle>();
+
+		for (Triangle tri : triangles) {
+			triangle.add(tri);
+		}
+
+		System.out.println("TRIANGLE COUNT : " + triangle.size());
+		System.out.println("EDGES SIZE : " + edges.size());
+		int max = (int)((double)edges.size() * (1.0 - ratioReduction));
+		System.out.println("EDGES TO BE REMOVED : " + edges.size());
+
+		for (int i = 0; i < max; i++) {
+			Map.Entry<Edge, ArrayList<Triangle>> entry = edges.firstEntry();
+			Edge vert = entry.getKey();
+			Point med = vert.getMiddlePoint();
+
+			for (Triangle tri : entry.getValue()) {
+				if (tri.contains(vert.getPointA()) && tri.contains(vert.getPointB())) {
+					triangle.remove(tri);
+				} else {
+					tri.replacePoint(vert.getPointA(), med);
+					tri.replacePoint(vert.getPointB(), med);
+				}
+			}
+
+			edges.remove(vert);
+		}
+
+		System.out.println("TRIANGLE COUNT AFTER REDUCTION : " + triangle.size() + "\n");
+		return triangle;
 	}
 
 	public ArrayList<Triangle> getTriangles() {

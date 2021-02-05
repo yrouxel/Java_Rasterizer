@@ -2,15 +2,16 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /** base brick of the world, each chunk contains sub elements */
-public class Chunk{
+public class Chunk extends Surface {
 	private Point coord;
 	private int chunkLevel;
-	private TreeMap<Point, Object> smallerChunks = new TreeMap<Point, Object>();
+	private TreeMap<Point, Surface> smallerChunks = new TreeMap<Point, Surface>();
 
 	private Point centerOfGravity;
-	private Vector inverseNormal;
+	private Point coneTop;
+	private Vector normal;
 	private double coneAngle;
-	private double totalArea;
+	private double totalSurface;
 
 	public Chunk() {}
 
@@ -19,43 +20,45 @@ public class Chunk{
 		this.chunkLevel = chunkLevel;
 	}
 
-	/** computes an inverseNormale and a center of gravity (ponderated average)
+	/** computes an normale and a center of gravity (ponderated average)
 	 * if normal == 0, the surface is closed
 	 */
 	public void computeVisibilityCone() {
 		centerOfGravity = new Point();
-		inverseNormal = new Vector();
-		totalArea = 0;
+		normal = new Vector();
+		totalSurface = 0;
 
-		if (chunkLevel == 1) {
-			for (Map.Entry<Point, Object> entry : smallerChunks.entrySet()) {
-				Triangle tri = (Triangle)entry.getValue();
-
-				Vector normale = tri.getNormal();
-				double area = normale.getNorm() / 2;
-				totalArea += area;
-
-				Point center = tri.getCenterOfGravity();
-				center.multiply(area);
-				centerOfGravity.add(center);
-				inverseNormal.add(normale);
-			}
-			centerOfGravity.multiply(1.0 / totalArea);
-			inverseNormal.multiply(-1);
-		} else {
-			for (Map.Entry<Point, Object> entry : smallerChunks.entrySet()) {
-				Chunk chunk = (Chunk)entry.getValue();
-
-				totalArea += chunk.getTotalArea();
-
-				Point center = new Point(chunk.getCenterOfGravity());
-				center.multiply(chunk.getTotalArea());
-				centerOfGravity.add(center);
-
-				inverseNormal.add(chunk.getInverseNormal());
-			}
-			centerOfGravity.multiply(1.0 / totalArea);
+		for (Map.Entry<Point, Surface> entry : smallerChunks.entrySet()) {
+			totalSurface += entry.getValue().getTotalSurface();
+			centerOfGravity.add(entry.getValue().getCenterOfGravity());
+			normal.add(entry.getValue().getNormal());
 		}
+
+		Surface maxSurface = getSortedSurfacesByScalarProduct();
+		if (maxSurface != null) {
+			
+		}
+	}
+
+	public Surface getSortedSurfacesByScalarProduct() {
+		if (normal.getNorm() == 0) {
+			return null;
+		}
+
+		Surface maxSurface = null;
+		double minScalarProduct = 0;
+
+		for (Map.Entry<Point, Surface> entry : smallerChunks.entrySet()) {
+			double scalarProduct = entry.getValue().getNormal().getScalarProduct(normal);
+			if (scalarProduct <= 0) {
+				return null;
+			}
+			if (minScalarProduct < -scalarProduct) {
+				minScalarProduct = -scalarProduct;
+				maxSurface = entry.getValue();
+			}
+		}
+		return maxSurface;
 	}
 
 	//---GETTERS---
@@ -64,12 +67,12 @@ public class Chunk{
 		return centerOfGravity;
 	}
 
-	public Vector getInverseNormal() {
-		return inverseNormal;
+	public Vector getNormal() {
+		return normal;
 	}
 
-	public double getTotalArea() {
-		return totalArea;
+	public double getTotalSurface() {
+		return totalSurface;
 	}
 
 	public Point getCoord() {
@@ -108,13 +111,13 @@ public class Chunk{
 		return pt;
 	}
 
-	public TreeMap<Point, Object> getSmallerChunks() {
+	public TreeMap<Point, Surface> getSmallerChunks() {
 		return smallerChunks;
 	}
 
 	//---SETTERS---
 
-	public void setSmallerChunks(TreeMap<Point, Object> smallerChunks) {
+	public void setSmallerChunks(TreeMap<Point, Surface> smallerChunks) {
 		this.smallerChunks = smallerChunks;
 	}
 }

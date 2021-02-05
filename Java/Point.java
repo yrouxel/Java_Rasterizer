@@ -1,6 +1,5 @@
-public class Point implements Comparable {
+public class Point implements Comparable<Point> {
     private double x, y, z;
-    // private int x2D, y2D;
 
     public Point() {
         this.x = 0;
@@ -15,6 +14,10 @@ public class Point implements Comparable {
     }
     
     public Point(Point clone) {
+        replace(clone);
+    }
+
+    public void replace(Point clone) {
         this.x = clone.x;
         this.y = clone.y;
         this.z = clone.z;
@@ -44,8 +47,10 @@ public class Point implements Comparable {
         z += a;
     }
 
-    public Boolean equals(Point b) {
-        return x == b.getX() && y == b.getY() && z == b.getZ();
+    public Point getAverage(Point b) {
+        Point p = new Point(x + b.x, y + b.y, z + b.z);
+        p.multiply(1.0/2.0);
+        return p;
     }
 
     public double getNorm() {
@@ -116,51 +121,17 @@ public class Point implements Comparable {
         return (int)(offset - z * focalDistance / y);
     }
 
-    /*public void computeScreenCoordinates(Point camera, double theta, double phi, double offsetX, double offsetY, double focalDistance) {
-        double x2 = x - camera.getX();
-        double y2 = y - camera.getY();
-        double z2 = z - camera.getZ();
-
-        double xBefore = x2;
-
-        //theta rotation
-        x2 = xBefore*Math.cos(theta) + y2*Math.sin(theta);
-        double yBefore = y2*Math.cos(theta) - xBefore*Math.sin(theta);
-
-        //phi rotation
-        y2 = yBefore*Math.cos(phi) + z2*Math.sin(phi);
-        z2 = z2*Math.cos(phi) - yBefore*Math.sin(phi);
-
-        x2D = (int)(offsetX + x2 * focalDistance / y2);
-        y2D = (int)(offsetY - z2 * focalDistance / y2);
-    }
-
-    public void eraseScreenCoordinates() {
-        x2D = -1;
-        y2D = -1;
-
-    }
-
-    public int getX2D() {
-        return x2D;
-    }
-
-    public int getY2D() {
-        return y2D;
-    }*/
-
     @Override
     public String toString() {
         return "(x=" + x + ", y=" + y + ", z=" + z + ")";
     }
 
+    public Boolean equals(Point b) {
+        return x == b.getX() && y == b.getY() && z == b.getZ();
+    }
 
     @Override
-    public int compareTo(Object o) {
-        if (!(o instanceof Point)) {
-            return -1;
-        }
-        Point pt = (Point)o;
+    public int compareTo(Point pt) {
         if (pt.getX() > x) {
             return -1;
         } else if (pt.getX() < x) {

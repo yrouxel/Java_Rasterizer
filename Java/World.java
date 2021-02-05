@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -6,7 +7,7 @@ public class World {
 	private static int biggerChunkSize = 2;
 	private int chunkLevels = 1;
 
-	private TreeMap<Point, Object> chunks = new TreeMap<Point, Object>();
+	private TreeMap<Point, Surface> chunks = new TreeMap<Point, Surface>();
 
 	public void addObjectToWorld(Object3D obj) {
 		addObject(obj);
@@ -20,8 +21,8 @@ public class World {
 		// checkType(chunks, chunkLevels);
 	}
 
-	public int countTriangles(int total, TreeMap<Point, Object> chunk) {
-		for (Map.Entry<Point, Object> entry : chunk.entrySet()) {
+	public int countTriangles(int total, TreeMap<Point, Surface> chunk) {
+		for (Map.Entry<Point, Surface> entry : chunk.entrySet()) {
 			Chunk subChunk = (Chunk)entry.getValue();
 			if (subChunk.getChunkLevel() == 1) {
 				total += subChunk.getSmallerChunks().size();
@@ -32,11 +33,11 @@ public class World {
 		return total;
 	}
 
-	public void checkType(TreeMap<Point, Object> chunk, int chunkLevel) {
+	public void checkType(TreeMap<Point, Surface> chunk, int chunkLevel) {
 		int chunksCount = 0;
 		int triangleCount = 0;
 
-		for (Map.Entry<Point, Object> entry : chunk.entrySet()) {
+		for (Map.Entry<Point, Surface> entry : chunk.entrySet()) {
 			if (entry.getValue() instanceof Chunk) {
 				chunksCount++;
 			} else {
@@ -50,17 +51,17 @@ public class World {
 			System.out.println("TRIANGLE COUNT : " + triangleCount);
 			System.out.println("CHUNK LEVEL : " + chunkLevel);
 		}
-		for (Map.Entry<Point, Object> entry : chunk.entrySet()) {
+		for (Map.Entry<Point, Surface> entry : chunk.entrySet()) {
 			if (entry.getValue() instanceof Chunk) {
 				checkType(((Chunk)entry.getValue()).getSmallerChunks(), chunkLevel - 1);
 			}
 		}
 	}
 
-	public void countChunks(TreeMap<Point, Object> chunks, int chunkLevel) {
+	public void countChunks(TreeMap<Point, Surface> chunks, int chunkLevel) {
 		int total = 0;
-		TreeMap<Point, Object> listChunks = new TreeMap<Point, Object>();
-		for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
+		TreeMap<Point, Surface> listChunks = new TreeMap<Point, Surface>();
+		for (Map.Entry<Point, Surface> entry : chunks.entrySet()) {
 			Chunk chunk = (Chunk)entry.getValue();
 			if (chunk.getChunkLevel() == chunkLevel) {
 				total++;
@@ -81,8 +82,8 @@ public class World {
 	public void addChunksToChunks() {
 		while (chunks.size() > 8) {
 			chunkLevels++;
-			TreeMap<Point, Object> biggerChunks = new TreeMap<Point, Object>();
-			for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
+			TreeMap<Point, Surface> biggerChunks = new TreeMap<Point, Surface>();
+			for (Map.Entry<Point, Surface> entry : chunks.entrySet()) {
 				addObjectToChunk(chunkLevels, chunkLevels, entry.getKey(), biggerChunks, entry.getKey(), entry.getValue());
 			}
 			chunks = biggerChunks;
@@ -90,7 +91,7 @@ public class World {
 	}
 
 	/** add an object to the given chunk level, creates its own container if necessary */
-	public void addObjectToChunk(int currentChunkLevel, int destinationChunkLevel, Point pt, TreeMap<Point, Object> subChunks, Point key, Object obj) {
+	public void addObjectToChunk(int currentChunkLevel, int destinationChunkLevel, Point pt, TreeMap<Point, Surface> subChunks, Point key, Surface obj) {
 		Point chunkPoint = computeChunkPoint(pt, chunkSize * Math.pow(biggerChunkSize, currentChunkLevel-1));
 
 		Chunk smallerChunk = (Chunk)subChunks.get(chunkPoint);
@@ -115,20 +116,20 @@ public class World {
 	}
 
 	/** if a chunk contains only one subChunk, the subChunk becomes the top chunk */
-	public TreeMap<Point, Object> removeUnnecessaryChunks(TreeMap<Point, Object> chunks) {
-		TreeMap<Point, Object> updatedChunks = new TreeMap<Point, Object>();
+	public TreeMap<Point, Surface> removeUnnecessaryChunks(TreeMap<Point, Surface> chunks) {
+		TreeMap<Point, Surface> updatedChunks = new TreeMap<Point, Surface>();
 		
-		for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
+		for (Map.Entry<Point, Surface> entry : chunks.entrySet()) {
 			Chunk chunk = (Chunk)entry.getValue();
-			TreeMap<Point, Object> subChunks = chunk.getSmallerChunks();
+			TreeMap<Point, Surface> subChunks = chunk.getSmallerChunks();
 
-			if (chunk.getChunkLevel() > 1) {
+			if (chunk.getChunkLevel() > 2) {
 				subChunks = removeUnnecessaryChunks(subChunks);
 				chunk.setSmallerChunks(subChunks);
 			}
 
 			if (subChunks.size() == 1) {
-				Map.Entry<Point, Object> subEntry = subChunks.firstEntry();
+				Map.Entry<Point, Surface> subEntry = subChunks.firstEntry();
 
 				updatedChunks.put(subEntry.getKey(), subEntry.getValue());
 			} else if (subChunks.size() > 1) {
@@ -146,8 +147,9 @@ public class World {
 		int triProcessed = 0;
 		int triKProcessed = 0;
 
-		System.out.println("TRIANGLE COUNT : " + obj.getTriangles().size());
-		for (Triangle tri : obj.getTriangles()) {
+		ArrayList<Triangle> trianglesToUse = obj.getTriangles();
+		// ArrayList<Triangle> trianglesToUse = obj.computeEdgesReduction(obj.generateEdges(obj.getTriangles()), 0.99);
+		for (Triangle tri : trianglesToUse) {
 			chunkPoint1 = computeChunkPoint(tri.getPoints()[0], chunkSize);
 			chunkPoint2 = computeChunkPoint(tri.getPoints()[1], chunkSize);
 			chunkPoint3 = computeChunkPoint(tri.getPoints()[2], chunkSize);
@@ -178,6 +180,31 @@ public class World {
 		}
 	}
 
+	public ArrayList<Triangle> generateWorkableTriangles(Chunk chunk) {
+		ArrayList<Triangle> workableTriangles = new ArrayList<Triangle>();
+
+		for (Map.Entry<Point, Surface> entry : chunk.getSmallerChunks().entrySet()) {
+			Triangle tri = (Triangle)entry.getValue();
+
+			if (isTriangleEntirelyInChunk(chunk.getCoord(), tri)) {
+				workableTriangles.add(tri);
+			}
+		}
+
+		return workableTriangles;
+	}
+
+	public boolean isTriangleEntirelyInChunk(Point coord, Triangle tri) {
+		for (Point point : tri.getPoints()) {
+			Point p = computeChunkPoint(point, chunkSize);
+			if (!p.equals(coord)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+
 	/** returns the coordinates of the chunk a point should be contained by */
 	public Point computeChunkPoint(Point pt, double chunkSize) {
 		double x = (int)Math.floor(pt.getX()/chunkSize);
@@ -200,7 +227,7 @@ public class World {
 		return chunkSize;
 	}
 
-	public TreeMap<Point, Object> getChunks() {
+	public TreeMap<Point, Surface> getChunks() {
 		return chunks;
 	}
 

@@ -5,6 +5,7 @@ import javax.swing.Timer;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.awt.*;
@@ -16,6 +17,13 @@ public class Projecter2D extends JFrame {
 
 	private BufferedImage imageBuffer;// buffer d’affichage
 	private BufferedImage depthBuffer; // buffer d’affichage
+
+	private Graphics gImageBuffer;
+	private Graphics gDepthBuffer;
+
+	//pixels to draw
+	private int[] xs = new int[3];
+	private int[] ys = new int[3];
 
 	//debug variables
 	private boolean drawingImage = true;
@@ -49,7 +57,9 @@ public class Projecter2D extends JFrame {
 
 	private long startTime;
 
-	TreeMap<Double, Chunk> chunksToDraw = new TreeMap<Double, Chunk>(Collections.reverseOrder());
+	private Vector cameraToTriangle = new Vector();
+	private HashMap<Point, int[]> tempPointsInChunk = new HashMap<Point, int[]>();
+	private TreeMap<Double, Triangle> trianglesInChunk = new TreeMap<Double, Triangle>(Collections.reverseOrder());
 
 	public Projecter2D(World world) {
 		super("3D ENGINE");
@@ -97,6 +107,9 @@ public class Projecter2D extends JFrame {
 		imageBuffer = new BufferedImage((int)dim.getWidth(), (int)dim.getHeight(), BufferedImage.TYPE_INT_RGB);
 		depthBuffer = new BufferedImage((int)dim.getWidth(), (int)dim.getHeight(), BufferedImage.TYPE_INT_RGB);
 
+		gImageBuffer = imageBuffer.getGraphics();
+		gDepthBuffer = depthBuffer.getGraphics();
+
 		robot.mouseMove(centerX, centerY);
 	}
 
@@ -118,7 +131,7 @@ public class Projecter2D extends JFrame {
 	}
 
 	/** determines recursively which chunks to draw */
-	public void sortChunksAndDrawDepthBuffer(Graphics gDepthBuffer, Graphics gImage, TreeMap<Point, Object> chunks, double chunkSize, double biggerChunkSize, int origineChunkLevel) {
+	public void sortChunksAndDrawDepthBuffer(TreeMap<Point, Surface> chunks, double chunkSize, double biggerChunkSize, int origineChunkLevel) {
 		//first condition : be in screen space
 		TreeMap<Double, Tuple<Chunk, Rectangle>> sortedChunks = sortChunks(chunks, chunkSize, biggerChunkSize);
 
@@ -128,12 +141,26 @@ public class Projecter2D extends JFrame {
 				Chunk chunk = entry.getValue().getX();
 
 				if (chunk.getChunkLevel() == 1) {
-					for (Map.Entry<Double, Triangle> triangle : sortTrianglesInChunk(chunk).entrySet()) {
-						drawTriangle(gDepthBuffer, triangle.getValue());
+					sortTrianglesInChunk(entry.getValue().getX());
+		
+					for (Map.Entry<Double, Triangle> entry2 : trianglesInChunk.entrySet()) {
+						Triangle tri = entry2.getValue();
+				
+						for (int i = 0; i < 3; i++) {
+							int[] projection = tempPointsInChunk.get(tri.getPoints()[i]);
+							
+							xs[i] = projection[0];
+							ys[i] = projection[1];
+						}
+						
+						gDepthBuffer.setColor(Color.WHITE);
+						gDepthBuffer.fillPolygon(xs, ys, 3);
+
+						gImageBuffer.setColor(getTriangleShade(tri));
+						gImageBuffer.fillPolygon(xs, ys, 3);
 					}
-					chunksToDraw.put(new Vector(chunk.getCenter(chunkSize), cameraP).getNorm(), chunk);
 				} else {
-					sortChunksAndDrawDepthBuffer(gDepthBuffer, gImage, chunk.getSmallerChunks(), chunkSize, biggerChunkSize, chunk.getChunkLevel());
+					sortChunksAndDrawDepthBuffer(chunk.getSmallerChunks(), chunkSize, biggerChunkSize, chunk.getChunkLevel());
 				}
 				
 				//debug modes
@@ -151,10 +178,10 @@ public class Projecter2D extends JFrame {
 	}
 
 	/** returns a list of visible chunks sorted by distance to camera */
-	public TreeMap<Double, Tuple<Chunk, Rectangle>> sortChunks(TreeMap<Point, Object> chunks, double baseChunkSize, double biggerChunkSize) {
+	public TreeMap<Double, Tuple<Chunk, Rectangle>> sortChunks(TreeMap<Point, Surface> chunks, double baseChunkSize, double biggerChunkSize) {
 		TreeMap<Double, Tuple<Chunk, Rectangle>> depthChunks = new TreeMap<Double, Tuple<Chunk, Rectangle>>();
 		
-		for (Map.Entry<Point, Object> entry : chunks.entrySet()) {
+		for (Map.Entry<Point, Surface> entry : chunks.entrySet()) {
 			Chunk chunk = (Chunk)entry.getValue();
 			double chunkSize = baseChunkSize * Math.pow(biggerChunkSize, chunk.getChunkLevel()-1);
 			Rectangle rect = getChunkProjectionBounds(chunk, chunkSize);
@@ -168,19 +195,25 @@ public class Projecter2D extends JFrame {
 	}
 
 	/** returns a list of visible triangles sorted by distance to camera */
-	public TreeMap<Double, Triangle> sortTrianglesInChunk(Chunk chunk) {
-		TreeMap<Double, Triangle> triangles = new TreeMap<Double, Triangle>();
+	public void sortTrianglesInChunk(Chunk chunk) {
+		tempPointsInChunk.clear();
+		trianglesInChunk.clear();
 
-		for (Map.Entry<Point, Object> entry : chunk.getSmallerChunks().entrySet()) {
+		for (Map.Entry<Point, Surface> entry : chunk.getSmallerChunks().entrySet()) {
 			Triangle tri = (Triangle)entry.getValue();
-			Vector cameraToTriangle = new Vector(tri.getCenterOfGravity(), cameraP);
+			cameraToTriangle.recreate(tri.getCenterOfGravity(), cameraP);
 
-			// object must be facing towards the camera
+			// Surface must be facing towards the camera
 			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0) {
-				triangles.put(cameraToTriangle.getNorm(), tri);
+				trianglesInChunk.put(cameraToTriangle.getNorm(), tri);
+
+				for (Point p : tri.getPoints()) {
+					if (!tempPointsInChunk.containsKey(p)) {
+						tempPointsInChunk.put(p, compute2DProjection(p));
+					}
+				}
 			}
 		}
-		return triangles;
 	}
 
 	/** returns a box containing the 2D view of the chunk if it is in screen space, null otherwise */
@@ -225,60 +258,62 @@ public class Projecter2D extends JFrame {
 		return false;
 	}
 
-	/** draws every chunk in the list */
-	public void drawChunks(Graphics g) {
-		for (Map.Entry<Double, Chunk> entry : chunksToDraw.entrySet()) {
-			for (Map.Entry<Double, Triangle> triangle : sortTrianglesInChunk(entry.getValue()).entrySet()) {
-				drawTriangleWithShade(g, triangle.getValue());
-			}
-		}
-
+	/** draws debug optionsin the list */
+	public void drawDebugChunks() {
 		// debug options
-		if (debugMode != 0) {
-			g.setColor(Color.WHITE);
-			for (Chunk chunk : debugChunksToDraw) {
-				drawBoundaries(g, chunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunk.getChunkLevel() - 1)));
-			}
-
-			if (debugMode == 3) {
-				g.setColor(Color.GREEN);
-				drawBoundaries(g, nextDisplayedChunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), nextDisplayedChunk.getChunkLevel() - 1)));
-
-				if (lastDisplayedChunk != null) {
-					g.setColor(Color.RED);
-					drawBoundaries(g, lastDisplayedChunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), lastDisplayedChunk.getChunkLevel() - 1)));
-				}
-			}
-		} 
-	}
-
-	/** draws a triangle */
-	public void drawTriangle(Graphics g, Triangle tri) {
-		int[] xs = new int[3];
-		int[] ys = new int[3];
-
-		for (int i = 0; i < 3; i++) {
-			Point ptNewBase = tri.getPoints()[i].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-			xs[i] = ptNewBase.get2DXTransformation(centerX, focalDistance);
-			ys[i] = ptNewBase.get2DYTransformation(centerY, focalDistance);
+		gImageBuffer.setColor(Color.WHITE);
+		for (Chunk chunk : debugChunksToDraw) {
+			drawBoundaries(gImageBuffer, chunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), chunk.getChunkLevel() - 1)));
 		}
-		g.fillPolygon(xs, ys, 3);
+
+		if (debugMode == 3) {
+			gImageBuffer.setColor(Color.GREEN);
+			drawBoundaries(gImageBuffer, nextDisplayedChunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), nextDisplayedChunk.getChunkLevel() - 1)));
+
+			if (lastDisplayedChunk != null) {
+				gImageBuffer.setColor(Color.RED);
+				drawBoundaries(gImageBuffer, lastDisplayedChunk.getPoints(world.getChunkSize() * Math.pow(world.getBiggerChunkSize(), lastDisplayedChunk.getChunkLevel() - 1)));
+			}
+		}
 	}
+
+	public int[] compute2DProjection(Point p) {
+		int[] pixelCoords = new int[2];
+
+        double x = p.getX() - cameraP.getX();
+        double y = p.getY() - cameraP.getY();
+        double z = p.getZ() - cameraP.getZ();
+
+        double xBefore = x;
+
+        //theta rotation
+        x = xBefore * cosTheta + y * sinTheta;
+        double yBefore = y*cosTheta - xBefore*sinTheta;
+
+        //phi rotation
+        y = yBefore*cosPhi + z*sinPhi;
+		z = z*cosPhi - yBefore*sinPhi;
+		
+		//2D Projection
+		pixelCoords[0] = (int)(centerX + x * focalDistance / y);
+		pixelCoords[1] = (int)(centerY - z * focalDistance / y);
+
+		return pixelCoords;
+    }
 
 	/** draws a triangle with shade computed with direction of light */
-	public void drawTriangleWithShade(Graphics g, Triangle tri) {
+	public Color getTriangleShade(Triangle tri) {
 		Vector normal = tri.getNormal();
 		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
 		normal.normalize();
 		lightToTriangle.normalize();
 
 		double shade = Math.max(-2.0 * normal.getScalarProduct(lightToTriangle), 0);
-		g.setColor(new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue()))));
-
-		drawTriangle(g, tri);
+		return new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue())));
 	} 
 
 	/** draws a texture linearly on a triangle */
+	/*
 	public void drawTriangleWithTexture(Graphics g, BufferedImage texture, Triangle tri) {
 		Vector normal = tri.getNormal();
 		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
@@ -340,14 +375,17 @@ public class Projecter2D extends JFrame {
 	}
 
 	/** returns the sign of the cross product */
+	/*
 	public Boolean getSign(int x1, int y1, int x2, int y2, int x3, int y3) {
 		  return (x1 - x3) * (y2 - y3) < (x2 - x3) * (y1 - y3);
 	}
 
 	/** checks if a given point is a triangle by a methode of cross products */
+	/*
 	public boolean IsPointInTriangle(int xPt, int yPt, int x1, int y1, int x2, int y2, int x3, int y3){
 		return (getSign(xPt, yPt, x1, y1, x2, y2) && getSign(xPt, yPt, x2, y2, x3, y3) && getSign(xPt, yPt, x3, y3, x1, y1));
 	}
+	
 
 	/** draws the box surrounding the chunk */
 	public void drawBoundaries(Graphics g, Point[] points) {
@@ -368,7 +406,7 @@ public class Projecter2D extends JFrame {
 	}
 
 	public void paint(Graphics g) {
-		Prepaint(imageBuffer.getGraphics(), depthBuffer.getGraphics());
+		Prepaint();
 		if (drawingImage) {
 			g.drawImage(imageBuffer, 0, 0, null);
 		} else {
@@ -376,32 +414,33 @@ public class Projecter2D extends JFrame {
 		}
 	}
 	
-	public void Prepaint(Graphics gImage, Graphics gDepthBuffer) {
+	public void Prepaint() {
 		gDepthBuffer.setColor(Color.BLACK);
 		gDepthBuffer.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
 		gDepthBuffer.setColor(Color.WHITE);
 
-		gImage.setColor(Color.BLACK);
-		gImage.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
+		gImageBuffer.setColor(Color.BLACK);
+		gImageBuffer.fillRect(0, 0, (int)dim.getWidth(), (int)dim.getHeight());
 
 		cosTheta = Math.cos(cameraTheta);
 		sinTheta = Math.sin(cameraTheta);
 		cosPhi = Math.cos(cameraPhi);
 		sinPhi = Math.sin(cameraPhi);
 
-		chunksToDraw.clear();
-
-		if (debugMode != 3) {
+		if (debugMode != 3 && debugMode != 0) {
 			debugChunksToDraw.clear();
 		}
 
 		startTime = System.currentTimeMillis();
-		sortChunksAndDrawDepthBuffer(gDepthBuffer, gImage, world.getChunks(), world.getChunkSize(), world.getBiggerChunkSize(), world.getChunkLevel() + 1);
-		drawChunks(gImage);
+		sortChunksAndDrawDepthBuffer(world.getChunks(), world.getChunkSize(), world.getBiggerChunkSize(), world.getChunkLevel() + 1);
+
+		if (debugMode != 0) {
+			drawDebugChunks();
+		}
 		
 		if (displayingDebug) {
 			if (drawingImage) {
-				displayDebug(gImage);
+				displayDebug(gImageBuffer);
 			} else {
 				displayDebug(gDepthBuffer);
 			}
@@ -467,7 +506,7 @@ public class Projecter2D extends JFrame {
 				debugMode++;
 				if (debugMode == 3) {
 					lastDisplayedChunk = null;
-					for (Map.Entry<Point, Object> entry : world.getChunks().entrySet()) {
+					for (Map.Entry<Point, Surface> entry : world.getChunks().entrySet()) {
 						debugChunksToDraw.add((Chunk)entry.getValue());
 					}
 					nextDisplayedChunk = debugChunksToDraw.get(0);
@@ -486,7 +525,7 @@ public class Projecter2D extends JFrame {
 				lastDisplayedChunk = nextDisplayedChunk;
 
 				debugChunksToDraw.clear();
-				for (Map.Entry<Point, Object> entry : lastDisplayedChunk.getSmallerChunks().entrySet()) {
+				for (Map.Entry<Point, Surface> entry : lastDisplayedChunk.getSmallerChunks().entrySet()) {
 					debugChunksToDraw.add((Chunk)entry.getValue());
 				}				
 				nextDisplayedChunk = debugChunksToDraw.get(0);
@@ -494,7 +533,7 @@ public class Projecter2D extends JFrame {
 				lastDisplayedChunk = null;
 
 				debugChunksToDraw.clear();
-				for (Map.Entry<Point, Object> entry : world.getChunks().entrySet()) {
+				for (Map.Entry<Point, Surface> entry : world.getChunks().entrySet()) {
 					debugChunksToDraw.add((Chunk)entry.getValue());
 				}
 				nextDisplayedChunk = debugChunksToDraw.get(0);

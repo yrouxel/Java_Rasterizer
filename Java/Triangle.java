@@ -1,7 +1,7 @@
 import java.util.Arrays;
 import java.awt.*;
 
-public class Triangle {
+public class Triangle extends Surface implements Comparable<Triangle>{
 	private Point points[] = new Point[3];
 	private TexturePoint texturePoints[];
 	String texturePath;
@@ -30,6 +30,55 @@ public class Triangle {
 		texturePoints[2] = c;
 	}
 
+	public boolean contains(Point p) {
+		for (Point pt : points) {
+			if (pt.equals(p)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public Boolean shareEdge(Triangle triangle) {
+		int commonPoints = 0;
+		for (int i = 0; i < points.length; i++) {
+			for (int j = 0; j < triangle.getPoints().length; j++) {
+				if (points[i].equals(triangle.getPoints()[j])) {
+					commonPoints++;
+				}
+			}
+		}
+		return commonPoints == 2;
+	}
+
+	public void replacePoint(Point a, Point b) {
+		for (int i = 0; i < 3; i++) {
+			if (points[i].equals(a)) {
+				points[i].replace(b);
+				break;
+			}
+		}
+	}
+
+	//---GETTERS---
+
+	public Vector getNormal() {
+		return new Vector(points[1], points[0]).getCrossProduct(new Vector(points[2], points[1]));
+	}
+
+	public double getTotalSurface() {
+		return getNormal().getNorm() / 2;
+	}
+
+	public Point getCenterOfGravity() {
+		Point g = new Point(0, 0, 0);
+		g.add(points[0]);
+		g.add(points[1]);
+		g.add(points[2]);
+		g.multiply(1.0/3.0);
+		return g;
+	}
+
 	public Point[] getPoints() {
 		return points;
 	}
@@ -42,33 +91,15 @@ public class Triangle {
 		return color;
 	}
 
-	public Boolean shareVertice(Triangle triangle) {
-		int commonPoints = 0;
-		for (int i = 0; i < points.length; i++) {
-			for (int j = 0; j < triangle.getPoints().length; j++) {
-				if (points[i].equals(triangle.getPoints()[j])) {
-					commonPoints++;
-				}
-			}
-		}
-		return commonPoints == 2;
-	}
-
-	public Vector getNormal() {
-		return new Vector(points[1], points[0]).getCrossProduct(new Vector(points[2], points[1]));
-	}
-
-	public Point getCenterOfGravity() {
-		Point g = new Point(0, 0, 0);
-		g.add(points[0]);
-		g.add(points[1]);
-		g.add(points[2]);
-		g.multiply(1.0/3.0);
-		return g;
-	}
+	//---END GETTERS---
 
 	@Override
 	public String toString() {
 		return "Triangle [points=" + Arrays.toString(points) + "]";
+	}
+
+	@Override
+	public int compareTo(Triangle tri) {
+		return points[0].compareTo(tri.getPoints()[0]);
 	}
 }
