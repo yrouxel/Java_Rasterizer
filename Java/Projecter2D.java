@@ -6,23 +6,29 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.TreeMap;
 import java.awt.*;
 
+/** handles 2D projection of a world and movement in the world */
 public class Projecter2D extends JFrame {
+	//comparison color for depth buffer
+	private final int rgbBlack = (Color.BLACK).getRGB();
+
+	//dimension variables
 	private Dimension dim;
 	private int centerX;
 	private int centerY;
 
+	//images and their graphics
 	private BufferedImage imageBuffer;// buffer d’affichage
 	private BufferedImage depthBuffer; // buffer d’affichage
-
 	private Graphics gImageBuffer;
 	private Graphics gDepthBuffer;
 
+	//pre initiated variables shade computing and bounds computing
+	private Point replaceablePointForChunks = new Point();
 	private Vector lightToTriangle = new Vector();
-	private int rgbBlack = (Color.BLACK).getRGB();
+	private Vector cameraToTriangle = new Vector();
 
 	//pixels to draw
 	private int[] projection = new int[2];
@@ -43,25 +49,30 @@ public class Projecter2D extends JFrame {
 	private Point cameraP = new Point(0, 0, 10);
 	private Point lightingP = new Point(0, 0, 10);
 
+	//camera rotations
 	private double cameraTheta = 0;
 	private double cameraPhi = 0;
 
+	//calculated sinus
 	private double cosTheta;
 	private double sinTheta;
 	private double cosPhi;
 	private double sinPhi;
 
+	//2D projection variables
 	private double alphaMax = Math.PI / 2;
 	private double focalDistance;
 
 	private World world;
 
+	//mouse variables
 	private Robot robot;
 	private Boolean mouseLocked = false;
 
+	//timer
 	private long startTime;
 
-	private Vector cameraToTriangle = new Vector();
+	//maps for general purpose
 	private HashMap<Point, int[]> tempPointsInChunk = new HashMap<Point, int[]>(128);
 	private TreeMap<Double, Triangle> trianglesInChunk = new TreeMap<Double, Triangle>(Collections.reverseOrder());
 
@@ -122,30 +133,13 @@ public class Projecter2D extends JFrame {
 		//first condition : be in screen space
 		TreeMap<Double, Chunk> sortedChunks = sortChunks(chunks);
 
-		//second condition : not be hidden behind other chunks
-		for (Map.Entry<Double, Chunk> entry : sortedChunks.entrySet()) {
-			Chunk chunk = entry.getValue();
+		for (Chunk chunk : sortedChunks.values()) {
+			//second condition : not be hidden behind other chunks
 			if (isChunkVisible(chunk)) {
 
 				if (chunk.getChunkLevel() == 1) {
 					sortTrianglesInChunk(chunk);
-		
-					for (Map.Entry<Double, Triangle> entry2 : trianglesInChunk.entrySet()) {
-						Triangle tri = entry2.getValue();
-				
-						for (int i = 0; i < 3; i++) {
-							int[] projection = tempPointsInChunk.get(tri.getPoints()[i]);
-							
-							xs[i] = projection[0];
-							ys[i] = projection[1];
-						}
-						
-						gDepthBuffer.setColor(Color.WHITE);
-						gDepthBuffer.fillPolygon(xs, ys, 3);
-
-						gImageBuffer.setColor(getTriangleShade(tri));
-						gImageBuffer.fillPolygon(xs, ys, 3);
-					}
+					drawTrianglesInChunk();
 				} else {
 					sortChunksAndDrawDepthBuffer(chunk.getSmallerChunks(), chunk.getChunkLevel());
 				}
@@ -164,13 +158,32 @@ public class Projecter2D extends JFrame {
 		}
 	}
 
+	/** draws the triangle found in trianglesInChunk */
+	public void drawTrianglesInChunk() {
+		for (Triangle tri : trianglesInChunk.values()) {				
+			for (int i = 0; i < 3; i++) {
+				int[] projection = tempPointsInChunk.get(tri.getPoints()[i]);
+				
+				xs[i] = projection[0];
+				ys[i] = projection[1];
+			}
+			
+			//drawing in depth buffer
+			gDepthBuffer.setColor(Color.WHITE);
+			gDepthBuffer.fillPolygon(xs, ys, 3);
+
+			//drawing in actual image
+			gImageBuffer.setColor(getTriangleShade(tri));
+			gImageBuffer.fillPolygon(xs, ys, 3);
+		}
+	}
+
 	/** returns a list of visible chunks sorted by distance to camera */
 	public TreeMap<Double, Chunk> sortChunks(TreeMap<Point, Surface> chunks) {
 		TreeMap<Double, Chunk> depthChunks = new TreeMap<Double, Chunk>();
 		
-		for (Map.Entry<Point, Surface> entry : chunks.entrySet()) {
-			Chunk chunk = (Chunk)entry.getValue();
-
+		for (Surface surface : chunks.values()) {
+			Chunk chunk = (Chunk)surface;
 			depthChunks.put(new Vector(chunk.getCenter(), cameraP).getNorm(), chunk);
 		}
 		return depthChunks;
@@ -181,14 +194,15 @@ public class Projecter2D extends JFrame {
 		tempPointsInChunk.clear();
 		trianglesInChunk.clear();
 
-		for (Map.Entry<Point, Surface> entry : chunk.getSmallerChunks().entrySet()) {
-			Triangle tri = (Triangle)entry.getValue();
+		for (Surface surface : chunk.getSmallerChunks().values()) {
+			Triangle tri = (Triangle)surface;
 			cameraToTriangle.setVector(tri.getCenterOfGravity(), cameraP);
 
 			// Surface must be facing towards the camera
 			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0) {
 				trianglesInChunk.put(cameraToTriangle.getNorm(), tri);
 
+				//maps points in the chunk to their 2D projection
 				for (Point p : tri.getPoints()) {
 					if (!tempPointsInChunk.containsKey(p)) {
 						tempPointsInChunk.put(p, compute2DProjectionWithReturn(p));
@@ -198,7 +212,7 @@ public class Projecter2D extends JFrame {
 		}
 	}
 
-	/** returns a box containing the 2D view of the chunk if it is in screen space, null otherwise */
+	/** returns a box containing the 2D view of the chunk if it is in screen space and contains at least one visible pixel, null otherwise */
 	public boolean isChunkVisible(Chunk chunk) {
 		int xMin = (int)dim.getWidth() + 1;
 		int xMax = -1;
@@ -206,13 +220,11 @@ public class Projecter2D extends JFrame {
 		int yMax = -1;
 
 		Point pt = chunk.getCoord();
-		Point pt2 = new Point(pt);
-
 		for (int i = 0; i < 2; i++) {
 			for (int j = 0; j < 2; j++) {
 				for (int k = 0; k < 2; k++) {
-					pt2.replace(pt.getX() + i * chunk.getChunkSize(), pt.getY() + j * chunk.getChunkSize(), pt.getZ() + k * chunk.getChunkSize());
-					compute2DProjection(pt2);
+					replaceablePointForChunks.replace(pt.getX() + i * chunk.getChunkSize(), pt.getY() + j * chunk.getChunkSize(), pt.getZ() + k * chunk.getChunkSize());
+					compute2DProjection(replaceablePointForChunks);
 
 					xMin = Math.min(xMin, projection[0]);
 					xMax = Math.max(xMax, projection[0]);
@@ -222,6 +234,7 @@ public class Projecter2D extends JFrame {
 			}
 		}
 
+		//if the box is out of screen space
 		if (xMax < 0 || xMin > dim.getWidth() || yMax < 0 || yMin > dim.getHeight()) {
 			return false;
 		}
@@ -231,6 +244,7 @@ public class Projecter2D extends JFrame {
 		yMin = Math.max(0, yMin);
 		yMax = Math.min((int)dim.getHeight(), yMax);
 
+		//if at least one pixel is visible (black) in depth buffer
 		for (int i = xMin; i < xMax; i++) {
 			for (int j = yMin; j < yMax; j++) {
 				if (depthBuffer.getRGB(i, j) == rgbBlack) {
@@ -241,6 +255,7 @@ public class Projecter2D extends JFrame {
 		return false;
 	}
 
+	/** computes the coordinates of the point in the new base, then computes its 2D projection */
 	public void compute2DProjection(Point p) {
         double x = p.getX() - cameraP.getX();
         double y = p.getY() - cameraP.getY();
@@ -261,6 +276,7 @@ public class Projecter2D extends JFrame {
 		projection[1] = (int)(centerY - z * focalDistance / y);
     }
 
+	/** same function as above, but returns the result */
 	public int[] compute2DProjectionWithReturn(Point p) {
 		int[] projection = new int[2];
 
@@ -518,8 +534,8 @@ public class Projecter2D extends JFrame {
 				debugMode++;
 				if (debugMode == 3) {
 					lastDisplayedChunk = null;
-					for (Map.Entry<Point, Surface> entry : world.getChunks().entrySet()) {
-						debugChunksToDraw.add((Chunk)entry.getValue());
+					for (Surface surface : world.getChunks().values()) {
+						debugChunksToDraw.add((Chunk)surface);
 					}
 					nextDisplayedChunk = debugChunksToDraw.get(0);
 				} else if (debugMode == 4) {
@@ -537,16 +553,16 @@ public class Projecter2D extends JFrame {
 				lastDisplayedChunk = nextDisplayedChunk;
 
 				debugChunksToDraw.clear();
-				for (Map.Entry<Point, Surface> entry : lastDisplayedChunk.getSmallerChunks().entrySet()) {
-					debugChunksToDraw.add((Chunk)entry.getValue());
+				for (Surface surface : lastDisplayedChunk.getSmallerChunks().values()) {
+					debugChunksToDraw.add((Chunk)surface);
 				}				
 				nextDisplayedChunk = debugChunksToDraw.get(0);
 			} else if (key == 'v') {
 				lastDisplayedChunk = null;
 
 				debugChunksToDraw.clear();
-				for (Map.Entry<Point, Surface> entry : world.getChunks().entrySet()) {
-					debugChunksToDraw.add((Chunk)entry.getValue());
+				for (Surface surface : world.getChunks().values()) {
+					debugChunksToDraw.add((Chunk)surface);
 				}
 				nextDisplayedChunk = debugChunksToDraw.get(0);
 			}
