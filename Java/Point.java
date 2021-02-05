@@ -8,9 +8,7 @@ public class Point implements Comparable<Point> {
     }
  
     public Point(double x, double y, double z) { 
-		this.x = x;
-		this.y = y;
-		this.z = z; 
+		replace(x, y, z); 
     }
     
     public Point(Point clone) {
@@ -21,6 +19,12 @@ public class Point implements Comparable<Point> {
         this.x = clone.x;
         this.y = clone.y;
         this.z = clone.z;
+    }
+
+    public void replace(double x, double y, double z) { 
+		this.x = x;
+		this.y = y;
+		this.z = z; 
     }
 
     public double getX() {
@@ -111,14 +115,6 @@ public class Point implements Comparable<Point> {
         //phi rotation
         y = yBefore*Math.cos(phi) + z*Math.sin(phi);
         z = z*Math.cos(phi) - yBefore*Math.sin(phi);
-    }
-    
-    public int get2DXTransformation(double offset, double focalDistance) {
-        return (int)(offset + x * focalDistance / y);
-    }
-
-    public int get2DYTransformation(double offset, double focalDistance) {
-        return (int)(offset - z * focalDistance / y);
     }
 
     @Override

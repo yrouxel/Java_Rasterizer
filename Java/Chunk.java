@@ -4,6 +4,7 @@ import java.util.TreeMap;
 /** base brick of the world, each chunk contains sub elements */
 public class Chunk extends Surface {
 	private Point coord;
+	private Double chunkSize;
 	private int chunkLevel;
 	private TreeMap<Point, Surface> smallerChunks = new TreeMap<Point, Surface>();
 
@@ -15,8 +16,9 @@ public class Chunk extends Surface {
 
 	public Chunk() {}
 
-	public Chunk(Point coord, int chunkLevel) {
+	public Chunk(Point coord, double chunkSize, int chunkLevel) {
 		this.coord = coord;
+		this.chunkSize = chunkSize;
 		this.chunkLevel = chunkLevel;
 	}
 
@@ -84,7 +86,7 @@ public class Chunk extends Surface {
 	}
 
 	/** takes the size of the chunk, returns all 8 corners */
-	public Point[] getPoints(double chunkSize) {
+	public Point[] getPoints() {
 		Point[] points = new Point[8];
 
 		for (int i = 0; i < 8; i++) {
@@ -103,7 +105,7 @@ public class Chunk extends Surface {
 	}
 
 	/** takes the size of the chunk, returns its middle point */
-	public Point getCenter(double chunkSize) {
+	public Point getCenter() {
 		Point pt = new Point(1, 1, 1);
 		pt.multiply(chunkSize/2);
 		pt.add(coord);
@@ -113,6 +115,10 @@ public class Chunk extends Surface {
 
 	public TreeMap<Point, Surface> getSmallerChunks() {
 		return smallerChunks;
+	}
+
+	public double getChunkSize() {
+		return chunkSize;
 	}
 
 	//---SETTERS---

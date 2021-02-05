@@ -9,16 +9,20 @@ public class Vector {
     }
 
 	public Vector(double x, double y, double z) {
+		setVector(x, y, z);
+	}
+
+	public Vector(Point p1,  Point p2) {
+		setVector(p1, p2);
+	}
+
+	public void setVector(double x, double y, double z) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
 	}
 
-	public Vector(Point p1,  Point p2) {
-		recreate(p1, p2);
-	}
-
-	public void recreate(Point p1,  Point p2) {
+	public void setVector(Point p1,  Point p2) {
 		x = p1.getX() - p2.getX();
 		y = p1.getY() - p2.getY();
 		z = p1.getZ() - p2.getZ();
