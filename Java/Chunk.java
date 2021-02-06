@@ -16,7 +16,7 @@ public class Chunk extends Surface {
 
 	public Chunk() {}
 
-	public Chunk(Point coord, double chunkSize, int chunkLevel) {
+	public Chunk(Point coord, Double chunkSize, int chunkLevel) {
 		this.coord = coord;
 		this.chunkSize = chunkSize;
 		this.chunkLevel = chunkLevel;

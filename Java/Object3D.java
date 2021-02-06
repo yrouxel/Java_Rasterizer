@@ -84,9 +84,9 @@ public class Object3D {
 				ArrayList<Triangle> list = edges.get(vert);
 				if (list == null) {
 					list = new ArrayList<Triangle>();
+					edges.put(vert, list);
 				}
 				list.add(tri);
-				edges.put(vert, list);
 			}
 		}
 		return edges;
@@ -103,7 +103,7 @@ public class Object3D {
 		System.out.println("TRIANGLE COUNT : " + triangle.size());
 		System.out.println("EDGES SIZE : " + edges.size());
 		int max = (int)((double)edges.size() * (1.0 - ratioReduction));
-		System.out.println("EDGES TO BE REMOVED : " + edges.size());
+		System.out.println("EDGES TO BE REMOVED : " + max);
 
 		for (int i = 0; i < max; i++) {
 			Map.Entry<Edge, ArrayList<Triangle>> entry = edges.firstEntry();
@@ -120,6 +120,10 @@ public class Object3D {
 			}
 
 			edges.remove(vert);
+
+			if (i%10000 == 0) {
+				System.out.println("REMOVED " + i + " EDGES");
+			}
 		}
 
 		System.out.println("TRIANGLE COUNT AFTER REDUCTION : " + triangle.size() + "\n");

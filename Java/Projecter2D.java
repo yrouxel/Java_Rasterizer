@@ -11,7 +11,7 @@ import java.awt.*;
 
 /** handles 2D projection of a world and movement in the world */
 public class Projecter2D extends JFrame {
-	//comparison color for depth buffer
+	// comparison color for depth buffer
 	private final int rgbBlack = (Color.BLACK).getRGB();
 
 	//dimension variables
@@ -136,8 +136,7 @@ public class Projecter2D extends JFrame {
 		for (Chunk chunk : sortedChunks.values()) {
 			//second condition : not be hidden behind other chunks
 			if (isChunkVisible(chunk)) {
-
-				if (chunk.getChunkLevel() == 1) {
+				if (chunk.getChunkLevel() == 0) {
 					sortTrianglesInChunk(chunk);
 					drawTrianglesInChunk();
 				} else {
@@ -489,7 +488,7 @@ public class Projecter2D extends JFrame {
 		if (debugMode == 3) {
 			Point p = nextDisplayedChunk.getCoord();
 			g.drawString("CHUNK INFO : " + p, 20, 140);
-			g.drawString("CHUNK POINT : " + world.computeChunkPoint(p, world.getBaseChunkSize() * Math.pow(world.getBiggerChunkSize(), nextDisplayedChunk.getChunkLevel())), 20, 160);
+			g.drawString("CHUNK POINT : " + world.computeChunkPoint(p, world.getChunkSizes().get(0) * Math.pow(world.getBiggerChunkSize(), nextDisplayedChunk.getChunkLevel())), 20, 160);
 		}
 	}
 
@@ -517,13 +516,10 @@ public class Projecter2D extends JFrame {
 			} else if (key == 'g') {
 				move /= 2;
 			} else if (key == 'y') {
-				debugChunkLevel += 1;
-				if (debugChunkLevel > world.getChunkLevel()) {
-					debugChunkLevel = 1;
-				}
+				debugChunkLevel = (debugChunkLevel + 1)%world.getChunkLevel();
 			} else if (key == 'h') {
 				debugChunkLevel -= 1;
-				if (debugChunkLevel == 0) {
+				if (debugChunkLevel == -1) {
 					debugChunkLevel = world.getChunkLevel();
 				}
 			} else if (key == 'u') {

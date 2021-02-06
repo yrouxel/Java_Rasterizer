@@ -1,5 +1,4 @@
 public class Vector {
-	private Point a, b;
 	private double x, y, z;
 
 	public Vector() {

@@ -3,11 +3,16 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class World {
-	private static double baseChunkSize = 10;
-	private static int biggerChunkSize = 2;
-	private int chunkLevels = 1;
+	private int biggerChunkSize;
+	private ArrayList<Double> chunkSizes = new ArrayList<Double>();
+	private int chunkLevels = 0;
 
 	private TreeMap<Point, Surface> chunks = new TreeMap<Point, Surface>();
+
+	public World(Double baseChunkSize, int biggerChunkSize) {
+		chunkSizes.add(0, baseChunkSize);
+		this.biggerChunkSize = biggerChunkSize;
+	}
 
 	public void addObjectToWorld(Object3D obj) {
 		addObject(obj);
@@ -18,44 +23,18 @@ public class World {
 
 		countChunks(chunks, chunkLevels);
 		System.out.println("TRIANGLE COUNT : " + countTriangles(0, chunks));
-		// checkType(chunks, chunkLevels);
 	}
 
 	public int countTriangles(int total, TreeMap<Point, Surface> chunk) {
 		for (Map.Entry<Point, Surface> entry : chunk.entrySet()) {
 			Chunk subChunk = (Chunk)entry.getValue();
-			if (subChunk.getChunkLevel() == 1) {
+			if (subChunk.getChunkLevel() == 0) {
 				total += subChunk.getSmallerChunks().size();
 			} else {
 				total = countTriangles(total, ((Chunk)entry.getValue()).getSmallerChunks());
 			}
 		}
 		return total;
-	}
-
-	public void checkType(TreeMap<Point, Surface> chunk, int chunkLevel) {
-		int chunksCount = 0;
-		int triangleCount = 0;
-
-		for (Map.Entry<Point, Surface> entry : chunk.entrySet()) {
-			if (entry.getValue() instanceof Chunk) {
-				chunksCount++;
-			} else {
-				triangleCount++;
-			}
-		}
-		if (chunksCount != 0 && triangleCount != 0) {
-			System.out.println("TYPE PROBLEM");
-		}
-		if (triangleCount != 0 && chunkLevel != 0) {
-			System.out.println("TRIANGLE COUNT : " + triangleCount);
-			System.out.println("CHUNK LEVEL : " + chunkLevel);
-		}
-		for (Map.Entry<Point, Surface> entry : chunk.entrySet()) {
-			if (entry.getValue() instanceof Chunk) {
-				checkType(((Chunk)entry.getValue()).getSmallerChunks(), chunkLevel - 1);
-			}
-		}
 	}
 
 	public void countChunks(TreeMap<Point, Surface> chunks, int chunkLevel) {
@@ -73,7 +52,7 @@ public class World {
 
 		System.out.println("CHUNK LEVEL " + chunkLevel + " CONTAINS : " + total + " ELEMENTS");
 
-		if (chunkLevel > 1) {
+		if (chunkLevel > 0) {
 			countChunks(listChunks, chunkLevel - 1);
 		}
 	}
@@ -82,6 +61,8 @@ public class World {
 	public void addChunksToChunks() {
 		while (chunks.size() > 8) {
 			chunkLevels++;
+			chunkSizes.add(chunkLevels, biggerChunkSize * chunkSizes.get(chunkLevels - 1));
+
 			TreeMap<Point, Surface> biggerChunks = new TreeMap<Point, Surface>();
 			for (Map.Entry<Point, Surface> entry : chunks.entrySet()) {
 				addObjectToChunk(chunkLevels, chunkLevels, entry.getKey(), biggerChunks, entry.getKey(), entry.getValue());
@@ -92,7 +73,7 @@ public class World {
 
 	/** add an object to the given chunk level, creates its own container if necessary */
 	public void addObjectToChunk(int currentChunkLevel, int destinationChunkLevel, Point pt, TreeMap<Point, Surface> subChunks, Point key, Surface obj) {
-		double chunkSize = baseChunkSize * Math.pow(biggerChunkSize, currentChunkLevel-1);
+		Double chunkSize = chunkSizes.get(currentChunkLevel);
 		Point chunkPoint = computeChunkPoint(pt, chunkSize);
 
 		Chunk smallerChunk = (Chunk)subChunks.get(chunkPoint);
@@ -124,7 +105,7 @@ public class World {
 			Chunk chunk = (Chunk)entry.getValue();
 			TreeMap<Point, Surface> subChunks = chunk.getSmallerChunks();
 
-			if (chunk.getChunkLevel() > 2) {
+			if (chunk.getChunkLevel() > 1) {
 				subChunks = removeUnnecessaryChunks(subChunks);
 				chunk.setSmallerChunks(subChunks);
 			}
@@ -146,10 +127,11 @@ public class World {
 		Point chunkPoint3;
 
 		int triProcessed = 0;
-		int triKProcessed = 0;
+
+		Double baseChunkSize = chunkSizes.get(0);
 
 		ArrayList<Triangle> trianglesToUse = obj.getTriangles();
-		// ArrayList<Triangle> trianglesToUse = obj.computeEdgesReduction(obj.generateEdges(obj.getTriangles()), 0.99);
+		// ArrayList<Triangle> trianglesToUse = obj.computeEdgesReduction(obj.generateEdges(obj.getTriangles()), 0.9);
 		for (Triangle tri : trianglesToUse) {
 			chunkPoint1 = computeChunkPoint(tri.getPoints()[0], baseChunkSize);
 			chunkPoint2 = computeChunkPoint(tri.getPoints()[1], baseChunkSize);
@@ -157,26 +139,24 @@ public class World {
 
 			if (chunkPoint1.equals(chunkPoint2)) {
 				if (chunkPoint1.equals(chunkPoint3)) {
-					addObjectToChunk(chunkLevels, 1, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
+					addObjectToChunk(chunkLevels, 0, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
 				} else {
-					addObjectToChunk(chunkLevels, 1, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
-					addObjectToChunk(chunkLevels, 1, tri.getPoints()[2], chunks, tri.getCenterOfGravity(), tri);
+					addObjectToChunk(chunkLevels, 0, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
+					addObjectToChunk(chunkLevels, 0, tri.getPoints()[2], chunks, tri.getCenterOfGravity(), tri);
 				}
 			} else if (chunkPoint1.equals(chunkPoint3) || chunkPoint2.equals(chunkPoint3)) {
-				addObjectToChunk(chunkLevels, 1, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
-				addObjectToChunk(chunkLevels, 1, tri.getPoints()[1], chunks, tri.getCenterOfGravity(), tri);
+				addObjectToChunk(chunkLevels, 0, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
+				addObjectToChunk(chunkLevels, 0, tri.getPoints()[1], chunks, tri.getCenterOfGravity(), tri);
 			} else {
-				addObjectToChunk(chunkLevels, 1, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
-				addObjectToChunk(chunkLevels, 1, tri.getPoints()[1], chunks, tri.getCenterOfGravity(), tri);
-				addObjectToChunk(chunkLevels, 1, tri.getPoints()[2], chunks, tri.getCenterOfGravity(), tri);
+				addObjectToChunk(chunkLevels, 0, tri.getPoints()[0], chunks, tri.getCenterOfGravity(), tri);
+				addObjectToChunk(chunkLevels, 0, tri.getPoints()[1], chunks, tri.getCenterOfGravity(), tri);
+				addObjectToChunk(chunkLevels, 0, tri.getPoints()[2], chunks, tri.getCenterOfGravity(), tri);
 			}
 
 			triProcessed++;
-			if (triProcessed == 100000) {
+			if (triProcessed%100000 == 0) {
 				// addChunksToChunks();
-				triProcessed = 0;
-				triKProcessed++;
-				System.out.println("PROCESSED " + (triKProcessed * 100000) + " TRIANGLES");
+				System.out.println("PROCESSED " + triProcessed + " TRIANGLES");
 			}
 		}
 	}
@@ -197,7 +177,7 @@ public class World {
 
 	public boolean isTriangleEntirelyInChunk(Point coord, Triangle tri) {
 		for (Point point : tri.getPoints()) {
-			Point p = computeChunkPoint(point, baseChunkSize);
+			Point p = computeChunkPoint(point, chunkSizes.get(0));
 			if (!p.equals(coord)) {
 				return false;
 			}
@@ -224,8 +204,8 @@ public class World {
 		return biggerChunkSize;
 	}
 
-	public double getBaseChunkSize() {
-		return baseChunkSize;
+	public ArrayList<Double> getChunkSizes() {
+		return chunkSizes;
 	}
 
 	public TreeMap<Point, Surface> getChunks() {
