@@ -11,17 +11,14 @@ import java.awt.*;
 
 /** handles 2D projection of a world and movement in the world */
 public class Projecter2D extends JFrame {
-	// comparison color for depth buffer
-	private final int rgbBlack = (Color.BLACK).getRGB();
-
 	//dimension variables
 	private Dimension dim;
 	private int centerX;
 	private int centerY;
 
 	//images and their graphics
-	private BufferedImage imageBuffer;// buffer d’affichage
-	private BufferedImage depthBuffer; // buffer d’affichage
+	private BufferedImage imageBuffer;
+	private BufferedImage depthBuffer;
 	private Graphics gImageBuffer;
 	private Graphics gDepthBuffer;
 
@@ -29,6 +26,7 @@ public class Projecter2D extends JFrame {
 	private Point replaceablePointForChunks = new Point();
 	private Vector lightToTriangle = new Vector();
 	private Vector cameraToTriangle = new Vector();
+	private Vector cameraToVisibilityCone = new Vector();
 
 	//pixels to draw
 	private int[] projection = new int[2];
@@ -47,7 +45,8 @@ public class Projecter2D extends JFrame {
 	//use for doom object
 	// private Point cameraP = new Point(-63, 202, 10);
 	private Point cameraP = new Point(0, 0, 10);
-	private Point lightingP = new Point(0, 0, 10);
+	// private Point lightingP = new Point(0, 0, 10);
+	private Point lightingP = cameraP;
 
 	//camera rotations
 	private double cameraTheta = 0;
@@ -138,7 +137,7 @@ public class Projecter2D extends JFrame {
 			if (isChunkVisible(chunk)) {
 				if (chunk.getChunkLevel() == 0) {
 					sortTrianglesInChunk(chunk);
-					drawTrianglesInChunk();
+					drawTrianglesInChunk2();
 				} else {
 					sortChunksAndDrawDepthBuffer(chunk.getSmallerChunks(), chunk.getChunkLevel());
 				}
@@ -172,8 +171,57 @@ public class Projecter2D extends JFrame {
 			gDepthBuffer.fillPolygon(xs, ys, 3);
 
 			//drawing in actual image
-			gImageBuffer.setColor(getTriangleShade(tri));
+			gImageBuffer.setColor(new Color(getTriangleShade(tri)));
 			gImageBuffer.fillPolygon(xs, ys, 3);
+		}
+	}
+
+
+	/** draws the triangle found in trianglesInChunk with clipping and depthbuffer drawing */
+	public void drawTrianglesInChunk2() {
+		for (Triangle tri : trianglesInChunk.values()) {				
+			int xMin = Integer.MAX_VALUE;
+			int xMax = Integer.MIN_VALUE;
+			int yMin = Integer.MAX_VALUE;
+			int yMax = Integer.MIN_VALUE;
+				
+			for (int i = 0; i < 3; i++) {
+				int[] projection = tempPointsInChunk.get(tri.getPoints()[i]);
+				
+				xs[i] = projection[0];
+				ys[i] = projection[1];
+		
+				xMin = Math.min(xMin, xs[i]);
+				xMax = Math.max(xMax, xs[i]);
+				yMin = Math.min(yMin, ys[i]);
+				yMax = Math.max(yMax, ys[i]);
+			}
+
+			if (xMax < 0 || xMin > dim.getWidth() || yMax < 0 || yMin > dim.getHeight()) {
+				return;
+			}
+	
+			xMin = Math.max(0, xMin);
+			xMax = Math.min((int)dim.getWidth(), xMax);
+			yMin = Math.max(0, yMin);
+			yMax = Math.min((int)dim.getHeight(), yMax);
+
+			for (int y = yMin; y < yMax; y++) {
+				boolean firstPixelFound = false;
+				for (int x = xMin; x < xMax; x++) {
+					if (depthBuffer.getRGB(x, y) == -16777216) {
+						if (isPointInTriangle(x + 0.5, y + 0.5, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2])) {
+							imageBuffer.setRGB(x, y, getTriangleShade(tri));
+							depthBuffer.setRGB(x, y, -1);
+							if (!firstPixelFound) {
+								firstPixelFound = true;
+							}
+						} else if (firstPixelFound) {
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -183,7 +231,17 @@ public class Projecter2D extends JFrame {
 		
 		for (Surface surface : chunks.values()) {
 			Chunk chunk = (Chunk)surface;
-			depthChunks.put(new Vector(chunk.getCenter(), cameraP).getNorm(), chunk);
+
+			if (!chunk.isAlwaysVisible()) {
+				cameraToVisibilityCone.setVector(chunk.getConeTop(), cameraP);
+				double coneAngle = chunk.getNormal().getScalarProduct(cameraToVisibilityCone) / (chunk.getNormal().getNorm() * cameraToVisibilityCone.getNorm());
+
+				if (coneAngle >= chunk.getConeAngle()) {
+					depthChunks.put(new Vector(chunk.getCenter(), cameraP).getNorm(), chunk);
+				}
+			} else {
+				depthChunks.put(new Vector(chunk.getCenter(), cameraP).getNorm(), chunk);
+			}
 		}
 		return depthChunks;
 	}
@@ -213,10 +271,10 @@ public class Projecter2D extends JFrame {
 
 	/** returns a box containing the 2D view of the chunk if it is in screen space and contains at least one visible pixel, null otherwise */
 	public boolean isChunkVisible(Chunk chunk) {
-		int xMin = (int)dim.getWidth() + 1;
-		int xMax = -1;
-		int yMin = (int)dim.getHeight() + 1;
-		int yMax = -1;
+		int xMin = Integer.MAX_VALUE;
+		int xMax = Integer.MIN_VALUE;
+		int yMin = Integer.MAX_VALUE;
+		int yMax = Integer.MIN_VALUE;
 
 		Point pt = chunk.getCoord();
 		for (int i = 0; i < 2; i++) {
@@ -246,7 +304,7 @@ public class Projecter2D extends JFrame {
 		//if at least one pixel is visible (black) in depth buffer
 		for (int i = xMin; i < xMax; i++) {
 			for (int j = yMin; j < yMax; j++) {
-				if (depthBuffer.getRGB(i, j) == rgbBlack) {
+				if (depthBuffer.getRGB(i, j) == -16777216) {
 					return true;
 				}
 			}
@@ -301,90 +359,24 @@ public class Projecter2D extends JFrame {
     }
 
 	/** draws a triangle with shade computed with direction of light */
-	public Color getTriangleShade(Triangle tri) {
-		Vector normal = tri.getNormal();
+	public int getTriangleShade(Triangle tri) {
 		lightToTriangle.setVector(tri.getCenterOfGravity(), lightingP);
-		normal.normalize();
 		lightToTriangle.normalize();
 
-		double shade = Math.max(-2.0 * normal.getScalarProduct(lightToTriangle), 0);
-		return new Color(Math.min(255, (int)(shade*tri.getColor().getRed())), Math.min(255, (int)(shade*tri.getColor().getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue())));
+		// rgb = (red << 16 | green << 8 | blue)
+		double shade = -tri.getNormal().getScalarProduct(lightToTriangle);
+		return (int)(shade*tri.getColor().getRed()) << 16 | (int)(shade*tri.getColor().getGreen()) << 8 | (int)(shade*tri.getColor().getBlue());
 	} 
 
-	/** draws a texture linearly on a triangle */
-	/*
-	public void drawTriangleWithTexture(Graphics g, BufferedImage texture, Triangle tri) {
-		Vector normal = tri.getNormal();
-		Vector lightToTriangle = new Vector(tri.getCenterOfGravity(), lightingP);
-		normal.normalize();
-		lightToTriangle.normalize();
-
-		double shade = Math.max(-2.0 * normal.getScalarProduct(lightToTriangle), 0);
-
-		int[] xs = new int[3];
-		int[] ys = new int[3];
-
-		int xMin = (int)dim.getWidth() + 1;
-		int xMax = -1;
-		int yMin = (int)dim.getHeight() + 1;
-		int yMax = -1;
-
-		int ixMin = 0;
-		int ixMax = 0;
-		int iyMin = 0;
-		int iyMax = 0;
-
-		for (int i = 0; i < 3; i++) {
-			Point ptNewBase = tri.getPoints()[i].getPointNewBaseOptimized(cameraP, cosTheta, sinTheta, cosPhi, sinPhi);
-			xs[i] = ptNewBase.get2DXTransformation(centerX, focalDistance);
-			ys[i] = ptNewBase.get2DYTransformation(centerY, focalDistance);
-
-			if (xs[i] < xMin) {
-				xMin = xs[i];
-				ixMin = i;
-			}
-			if (xs[i] > xMax) {
-				xMax = xs[i];
-				ixMax = i;
-			}
-
-			if (ys[i] < yMin) {
-				yMin = ys[i];
-				iyMin = i;
-			}
-			if (ys[i] > yMax) {
-				yMax = ys[i];
-				iyMax = i;
-			}
-		}
-
-		double xDiff = ((double)tri.getTexturePoints()[ixMax].getX() - (double)tri.getTexturePoints()[ixMin].getX()) / ((double)xMax - (double)xMin);
-		double yDiff = ((double)tri.getTexturePoints()[iyMax].getY() - (double)tri.getTexturePoints()[iyMin].getY()) / ((double)yMax - (double)yMin);
-
-		for (int i = xMin; i < xMax; i++) {
-			for (int j = yMin; j < yMax; j++) {
-				if (IsPointInTriangle(i, j, xs[1], ys[1], xs[2], ys[2], xs[3], ys[3])) {
-					int x = (int)((i - xMin) * xDiff + tri.getTexturePoints()[ixMin].getX());
-					int y = (int)((j - yMin) * yDiff + tri.getTexturePoints()[iyMin].getY());
-					Color color = new Color(texture.getRGB(x, y));
-					g.setColor(new Color(Math.min(255, (int)(shade*color.getRed())), Math.min(255, (int)(shade*color.getGreen())), Math.min(255, (int)(shade*tri.getColor().getBlue()))));
-				}
-			}
-		}
-	}
-
 	/** returns the sign of the cross product */
-	/*
-	public Boolean getSign(int x1, int y1, int x2, int y2, int x3, int y3) {
-		  return (x1 - x3) * (y2 - y3) < (x2 - x3) * (y1 - y3);
+	public boolean edgeFunction(double x1, double y1, double x2, double y2, double x3, double y3) {
+		return (x1 - x3) * (y2 - y3) <= (x2 - x3) * (y1 - y3);
 	}
 
 	/** checks if a given point is a triangle by a methode of cross products */
-	/*
-	public boolean IsPointInTriangle(int xPt, int yPt, int x1, int y1, int x2, int y2, int x3, int y3){
-		return (getSign(xPt, yPt, x1, y1, x2, y2) && getSign(xPt, yPt, x2, y2, x3, y3) && getSign(xPt, yPt, x3, y3, x1, y1));
+	public boolean isPointInTriangle(double xPt, double yPt, int x1, int y1, int x2, int y2, int x3, int y3){
+		return (edgeFunction(xPt, yPt, x1, y1, x2, y2) && edgeFunction(xPt, yPt, x2, y2, x3, y3) && edgeFunction(xPt, yPt, x3, y3, x1, y1));
 	}
-	
 
 	/** draws the box surrounding the chunk */
 	public void drawBoundaries(Graphics g, Point[] points) {
@@ -409,9 +401,9 @@ public class Projecter2D extends JFrame {
 		int[] projA = compute2DProjectionWithReturn(a);
 		int[] projB = compute2DProjectionWithReturn(b);
 
-		if (a.getY() > 0 && b.getY() > 0) {
+		// if (a.getY() > 0 && b.getY() > 0) {
 			g.drawLine(projA[0], projA[1], projB[0], projB[1]);
-		}
+		// }
 	}
 
 	/** draws debug optionsin the list */
@@ -529,6 +521,7 @@ public class Projecter2D extends JFrame {
 			} else if (key == 'o') {
 				debugMode++;
 				if (debugMode == 3) {
+					debugChunksToDraw.clear();
 					lastDisplayedChunk = null;
 					for (Surface surface : world.getChunks().values()) {
 						debugChunksToDraw.add((Chunk)surface);

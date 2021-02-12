@@ -1,9 +1,10 @@
 import java.util.Arrays;
-import java.awt.*;
+import java.awt.Color;
 
-public class Triangle extends Surface implements Comparable<Triangle>{
+public class Triangle extends Surface{
 	private Point points[] = new Point[3];
 	private TexturePoint texturePoints[];
+	private Vector normal;
 	String texturePath;
 
 	private Color color;
@@ -13,13 +14,12 @@ public class Triangle extends Surface implements Comparable<Triangle>{
 		points[0] = a;
 		points[1] = b;
 		points[2] = c;
+		normal = new Vector(points[1], points[0]).getCrossProduct(new Vector(points[2], points[1]));
+		normal.normalize();
 	}
 
 	public Triangle(Point a, Point b, Point c) {
-		color = Color.GRAY;
-		points[0] = a;
-		points[1] = b;
-		points[2] = c;
+		this(a, b, c, Color.GRAY);
 	}
 
 	public void addTextures(TexturePoint a, TexturePoint b, TexturePoint c, String texturePath) {
@@ -63,11 +63,11 @@ public class Triangle extends Surface implements Comparable<Triangle>{
 	//---GETTERS---
 
 	public Vector getNormal() {
-		return new Vector(points[1], points[0]).getCrossProduct(new Vector(points[2], points[1]));
+		return normal;
 	}
 
 	public double getTotalSurface() {
-		return getNormal().getNorm() / 2;
+		return normal.getNorm() / 2;
 	}
 
 	public Point getCenterOfGravity() {
@@ -93,13 +93,12 @@ public class Triangle extends Surface implements Comparable<Triangle>{
 
 	//---END GETTERS---
 
-	@Override
-	public String toString() {
-		return "Triangle [points=" + Arrays.toString(points) + "]";
+	public void setColor(Color color) {
+		this.color = color;
 	}
 
 	@Override
-	public int compareTo(Triangle tri) {
-		return points[0].compareTo(tri.getPoints()[0]);
+	public String toString() {
+		return "Triangle [points=" + Arrays.toString(points) + "]";
 	}
 }

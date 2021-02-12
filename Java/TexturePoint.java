@@ -1,16 +1,16 @@
 public class TexturePoint {
-	private double x, y;
+	private int x, y;
 
-	public TexturePoint(double x, double y) {
+	public TexturePoint(int x, int y) {
 		this.x = x;
 		this.y = y;
 	}
 
-	public double getX() {
+	public int getX() {
 		return x;
 	}
 
-	public double getY() {
+	public int getY() {
 		return y;
 	}
 }

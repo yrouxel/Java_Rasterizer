@@ -15,6 +15,10 @@ public class Point implements Comparable<Point> {
         replace(clone);
     }
 
+    public Point(Point clone, Vector vec, double scalar) {
+        replace(clone, vec, scalar);
+    }
+
     public void replace(Point clone) {
         this.x = clone.x;
         this.y = clone.y;
@@ -25,6 +29,12 @@ public class Point implements Comparable<Point> {
 		this.x = x;
 		this.y = y;
 		this.z = z; 
+    }
+
+    public void replace(Point clone, Vector vec, double scalar) {
+        this.x = clone.x + vec.getX() * scalar;
+        this.y = clone.y + vec.getY() * scalar;
+        this.z = clone.z + vec.getZ() * scalar;
     }
 
     public double getX() {

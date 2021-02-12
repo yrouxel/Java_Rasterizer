@@ -16,13 +16,13 @@ public class World {
 
 	public void addObjectToWorld(Object3D obj) {
 		addObject(obj);
-		addChunksToChunks();
-		countChunks(chunks, chunkLevels);
-		chunks = removeUnnecessaryChunks(chunks);
-		System.out.println("\nREMOVING UNNECESSARY CHUNKS \n");
 
 		countChunks(chunks, chunkLevels);
 		System.out.println("TRIANGLE COUNT : " + countTriangles(0, chunks));
+
+		for (Surface surface : chunks.values()) {
+			((Chunk)surface).computeVisibilityCone();
+		}
 	}
 
 	public int countTriangles(int total, TreeMap<Point, Surface> chunk) {
@@ -121,6 +121,20 @@ public class World {
 		return updatedChunks;
 	}
 
+	public void addObjectWithoutChunks(Object3D obj) {
+		int triProcessed = 0;
+		Chunk chunk = new Chunk(new Point(-100, -100, -100), 10000.0, 0);
+		chunks.put(new Point(-100, -100, -100), chunk);
+
+		for (Triangle tri : obj.getTriangles()) {
+			chunk.getSmallerChunks().put(tri.getCenterOfGravity(), tri);
+			triProcessed++;
+			if (triProcessed%100000 == 0) {
+				System.out.println("PROCESSED " + triProcessed + " TRIANGLES");
+			}
+		}
+	}
+
 	public void addObject(Object3D obj) {
 		Point chunkPoint1;
 		Point chunkPoint2;
@@ -159,6 +173,11 @@ public class World {
 				System.out.println("PROCESSED " + triProcessed + " TRIANGLES");
 			}
 		}
+
+		addChunksToChunks();
+		countChunks(chunks, chunkLevels);
+		chunks = removeUnnecessaryChunks(chunks);
+		System.out.println("\nREMOVING UNNECESSARY CHUNKS \n");
 	}
 
 	public ArrayList<Triangle> generateWorkableTriangles(Chunk chunk) {
