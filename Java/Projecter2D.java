@@ -45,8 +45,8 @@ public class Projecter2D extends JFrame {
 	//use for doom object
 	// private Point cameraP = new Point(-63, 202, 10);
 	private Point cameraP = new Point(0, 0, 10);
-	// private Point lightingP = new Point(0, 0, 10);
-	private Point lightingP = cameraP;
+	private Point lightingP = new Point(0, 0, 10);
+	// private Point lightingP = cameraP;
 
 	//camera rotations
 	private double cameraTheta = 0;
@@ -179,7 +179,9 @@ public class Projecter2D extends JFrame {
 
 	/** draws the triangle found in trianglesInChunk with clipping and depthbuffer drawing */
 	public void drawTrianglesInChunk2() {
-		for (Triangle tri : trianglesInChunk.values()) {				
+		for (Triangle tri : trianglesInChunk.values()) {
+			int rgb = getTriangleShade(tri);
+
 			int xMin = Integer.MAX_VALUE;
 			int xMax = Integer.MIN_VALUE;
 			int yMin = Integer.MAX_VALUE;
@@ -197,7 +199,7 @@ public class Projecter2D extends JFrame {
 				yMax = Math.max(yMax, ys[i]);
 			}
 
-			if (xMax < 0 || xMin > dim.getWidth() || yMax < 0 || yMin > dim.getHeight()) {
+			if (xMax < 0 || xMin >= dim.getWidth() || yMax < 0 || yMin >= dim.getHeight()) {
 				return;
 			}
 	
@@ -211,7 +213,7 @@ public class Projecter2D extends JFrame {
 				for (int x = xMin; x < xMax; x++) {
 					if (depthBuffer.getRGB(x, y) == -16777216) {
 						if (isPointInTriangle(x + 0.5, y + 0.5, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2])) {
-							imageBuffer.setRGB(x, y, getTriangleShade(tri));
+							imageBuffer.setRGB(x, y, rgb);
 							depthBuffer.setRGB(x, y, -1);
 							if (!firstPixelFound) {
 								firstPixelFound = true;
@@ -292,7 +294,7 @@ public class Projecter2D extends JFrame {
 		}
 
 		//if the box is out of screen space
-		if (xMax < 0 || xMin > dim.getWidth() || yMax < 0 || yMin > dim.getHeight()) {
+		if (xMax < 0 || xMin >= dim.getWidth() || yMax < 0 || yMin >= dim.getHeight()) {
 			return false;
 		}
 
@@ -364,7 +366,7 @@ public class Projecter2D extends JFrame {
 		lightToTriangle.normalize();
 
 		// rgb = (red << 16 | green << 8 | blue)
-		double shade = -tri.getNormal().getScalarProduct(lightToTriangle);
+		double shade = Math.max(0, -tri.getNormal().getScalarProduct(lightToTriangle));
 		return (int)(shade*tri.getColor().getRed()) << 16 | (int)(shade*tri.getColor().getGreen()) << 8 | (int)(shade*tri.getColor().getBlue());
 	} 
 
