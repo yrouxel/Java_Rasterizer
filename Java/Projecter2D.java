@@ -44,8 +44,9 @@ public class Projecter2D extends JFrame {
 
 	//use for doom object
 	// private Point cameraP = new Point(-63, 202, 10);
-	private Point cameraP = new Point(0, 0, 10);
-	private Point lightingP = new Point(0, 0, 10);
+	private Point cameraP = new Point(-300, -1500, 1500);
+	private Point lightingP = new Point(-300, -1500, 1500);
+	private Point directionP = new Point(0, 1, 0);
 	// private Point lightingP = cameraP;
 
 	//camera rotations
@@ -186,7 +187,8 @@ public class Projecter2D extends JFrame {
 			int xMax = Integer.MIN_VALUE;
 			int yMin = Integer.MAX_VALUE;
 			int yMax = Integer.MIN_VALUE;
-				
+			
+			//compute bounding box
 			for (int i = 0; i < 3; i++) {
 				int[] projection = tempPointsInChunk.get(tri.getPoints()[i]);
 				
@@ -199,27 +201,28 @@ public class Projecter2D extends JFrame {
 				yMax = Math.max(yMax, ys[i]);
 			}
 
-			if (xMax < 0 || xMin >= dim.getWidth() || yMax < 0 || yMin >= dim.getHeight()) {
-				return;
-			}
-	
-			xMin = Math.max(0, xMin);
-			xMax = Math.min((int)dim.getWidth(), xMax);
-			yMin = Math.max(0, yMin);
-			yMax = Math.min((int)dim.getHeight(), yMax);
+			//if box is at least partially inside screen space clip it
+			if (xMax >= 0 && xMin < dim.getWidth() && yMax >= 0 && yMin < dim.getHeight()) {
+				xMin = Math.max(0, xMin);
+				xMax = Math.min((int)dim.getWidth()-1, xMax);
+				yMin = Math.max(0, yMin);
+				yMax = Math.min((int)dim.getHeight()-1, yMax);
 
-			for (int y = yMin; y < yMax; y++) {
-				boolean firstPixelFound = false;
-				for (int x = xMin; x < xMax; x++) {
-					if (depthBuffer.getRGB(x, y) == -16777216) {
-						if (isPointInTriangle(x + 0.5, y + 0.5, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2])) {
-							imageBuffer.setRGB(x, y, rgb);
-							depthBuffer.setRGB(x, y, -1);
-							if (!firstPixelFound) {
-								firstPixelFound = true;
+				//iterate through it, compare with depth buffer color, check point is inside the triangle, paint it
+				boolean firstPixelFound;
+				for (int y = yMin; y < yMax; y++) {
+					firstPixelFound = false;
+					for (int x = xMin; x < xMax; x++) {
+						if (depthBuffer.getRGB(x, y) == -16777216) {
+							if (isPointInTriangle(x + 0.5, y + 0.5, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2])) {
+								imageBuffer.setRGB(x, y, rgb);
+								depthBuffer.setRGB(x, y, -1);
+								if (!firstPixelFound) {
+									firstPixelFound = true;
+								}
+							} else if (firstPixelFound) {
+								break;
 							}
-						} else if (firstPixelFound) {
-							break;
 						}
 					}
 				}
@@ -258,7 +261,7 @@ public class Projecter2D extends JFrame {
 			cameraToTriangle.setVector(tri.getCenterOfGravity(), cameraP);
 
 			// Surface must be facing towards the camera
-			if (tri.getNormal().getScalarProduct(cameraToTriangle) < 0) {
+			if (tri.getNormal().getScalarProduct(cameraToTriangle) > 0) {
 				trianglesInChunk.put(cameraToTriangle.getNorm(), tri);
 
 				//maps points in the chunk to their 2D projection
@@ -299,9 +302,9 @@ public class Projecter2D extends JFrame {
 		}
 
 		xMin = Math.max(0, xMin);
-		xMax = Math.min((int)dim.getWidth(), xMax);
+		xMax = Math.min((int)dim.getWidth()-1, xMax);
 		yMin = Math.max(0, yMin);
-		yMax = Math.min((int)dim.getHeight(), yMax);
+		yMax = Math.min((int)dim.getHeight()-1, yMax);
 
 		//if at least one pixel is visible (black) in depth buffer
 		for (int i = xMin; i < xMax; i++) {
@@ -316,6 +319,7 @@ public class Projecter2D extends JFrame {
 
 	/** computes the coordinates of the point in the new base, then computes its 2D projection */
 	public void compute2DProjection(Point p) {
+		//translation
         double x = p.getX() - cameraP.getX();
         double y = p.getY() - cameraP.getY();
         double z = p.getZ() - cameraP.getZ();
@@ -337,6 +341,7 @@ public class Projecter2D extends JFrame {
 
 	/** same function as above, but returns the result */
 	public int[] compute2DProjectionWithReturn(Point p) {
+		//translation
 		int[] projection = new int[2];
 
         double x = p.getX() - cameraP.getX();
@@ -366,13 +371,13 @@ public class Projecter2D extends JFrame {
 		lightToTriangle.normalize();
 
 		// rgb = (red << 16 | green << 8 | blue)
-		double shade = Math.max(0, -tri.getNormal().getScalarProduct(lightToTriangle));
+		double shade = Math.max(0, tri.getNormal().getScalarProduct(lightToTriangle));
 		return (int)(shade*tri.getColor().getRed()) << 16 | (int)(shade*tri.getColor().getGreen()) << 8 | (int)(shade*tri.getColor().getBlue());
 	} 
 
 	/** returns the sign of the cross product */
 	public boolean edgeFunction(double x1, double y1, double x2, double y2, double x3, double y3) {
-		return (x1 - x3) * (y2 - y3) <= (x2 - x3) * (y1 - y3);
+		return (x1 - x3) * (y2 - y3) >= (x2 - x3) * (y1 - y3);
 	}
 
 	/** checks if a given point is a triangle by a methode of cross products */
@@ -448,6 +453,9 @@ public class Projecter2D extends JFrame {
 		cosPhi = Math.cos(cameraPhi);
 		sinPhi = Math.sin(cameraPhi);
 
+		directionP.replace(0, 1, 0);
+		directionP.rotate(-cameraTheta, -cameraPhi);
+
 		if (debugMode != 3 && debugMode != 0) {
 			debugChunksToDraw.clear();
 		}
@@ -471,10 +479,7 @@ public class Projecter2D extends JFrame {
 	public void displayDebug(Graphics g) {
 		g.setColor(Color.WHITE);
 		g.drawString("(" + (int)cameraP.getX() + ", " + (int)cameraP.getY() + ", " + (int)cameraP.getZ() + ")", 20, 20);
-
-		Point movement = new Point(0, 100, 0);
-		movement.rotate(-cameraTheta, -cameraPhi);
-		g.drawString("(" + ((double)(int)movement.getX()/100) + ", " + ((double)(int)movement.getY()/100) + ", " + ((double)(int)movement.getZ()/100) + ")", 20, 40);
+		g.drawString("(" + directionP.getX() + ", " + directionP.getY() + ", " + directionP.getZ() + ")", 20, 40);
 		g.drawString("REFRESH TIME : " + (System.currentTimeMillis() - startTime) + " ms", 20, 60);
 		g.drawString("DISPLAYING : " + debugChunksToDraw.size() + " chunks\n", 20, 80);
 		g.drawString("CHUNK LEVEL : " + debugChunkLevel, 20, 100);

@@ -46,10 +46,10 @@ public class Object3D {
 			String texturePath = path;
 			texturePath = texturePath.split(".obj")[0];
 			texturePath += ".png";
-			// texture = ImageIO.read(new File(texturePath));
+			texture = ImageIO.read(new File(texturePath));
 
-			// double width = texture.getWidth();
-			// double height = texture.getHeight();
+			double width = texture.getWidth();
+			double height = texture.getHeight();
 
 			String line;
 			while ((line = br.readLine()) != null) {
@@ -58,11 +58,11 @@ public class Object3D {
 				// 	Edges = Integer.parseInt(elements[1]);
 				// } else 
 				if (elements[0].equals("v")) {
-					points.add(new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[2]), Double.parseDouble(elements[3])));
-				// } else if (elements[0].equals("vt")) {
-					// int x = (int)(Double.parseDouble(elements[1]) * width);
-					// int y = (int)(Double.parseDouble(elements[2]) * height);
-					// texturesPoints.add(new TexturePoint(x, y));
+					points.add(new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[3]), Double.parseDouble(elements[2])));
+				} else if (elements[0].equals("vt")) {
+					int x = (int)(Double.parseDouble(elements[1]) * width);
+					int y = (int)(Double.parseDouble(elements[2]) * height);
+					texturesPoints.add(new TexturePoint(x, y));
 				} else if (elements[0].equals("f")) {
 					if (elements.length == 4) {
 						Triangle tri = new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1));
@@ -126,24 +126,6 @@ public class Object3D {
 			}
 		}
 
-		for (int y = yMin; y < yMax; y++) {
-			boolean firstPixelFound = false;
-			for (int x = xMin; x < xMax; x++) {
-				if (isPointInTriangle(x, y, tp[0].getX(), tp[0].getY(), tp[1].getX(), tp[1].getY(), tp[2].getX(), tp[2].getY())) {
-					if (!firstPixelFound) {
-						firstPixelFound = true;
-					}
-					totalPixels++;
-					Color color = new Color(texture.getRGB(x, y));
-					totalR += color.getRed();
-					totalG += color.getGreen();
-					totalB += color.getBlue();
-				} else if (firstPixelFound) {
-					break;
-				}
-			}
-		}
-
 		if (totalPixels != 0) {
 			totalR /= totalPixels;
 			totalG /= totalPixels;
@@ -157,7 +139,7 @@ public class Object3D {
 
 	/** returns the sign of the cross product */
 	public boolean edgeFunction(double x1, double y1, double x2, double y2, double x3, double y3) {
-		return (x1 - x3) * (y2 - y3) <= (x2 - x3) * (y1 - y3);
+		return (x1 - x3) * (y2 - y3) >= (x2 - x3) * (y1 - y3);
 	}
 
 	/** checks if a given point is a triangle by a methode of cross products */
