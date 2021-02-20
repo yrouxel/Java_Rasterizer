@@ -15,7 +15,7 @@ CONTROLS:
 	g: speed down
 
 	DEBUG:
-	p: show debug info
+	p: change view point
 	o: change debug mode
 	i: show depth buffer
 	u: unlock mouse

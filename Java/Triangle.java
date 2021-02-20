@@ -1,16 +1,23 @@
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 
 public class Triangle extends Surface{
 	private Point points[] = new Point[3];
-	private TexturePoint texturePoints[];
 	private Vector normal;
-	String texturePath;
 
-	private Color color;
+	private BufferedImage texture;
+	private TexturePoint texturePoints[];
+	private float[] colorModifiers = new float[3];
+	private boolean needsUpdating = true;
+	private Color defaultColor;
 
-	public Triangle(Point a, Point b, Point c, Color color) {
-		this.color = color;
+	private HashMap<LightView, Integer> visibleLights = new HashMap<LightView, Integer>();
+
+	public Triangle(Point a, Point b, Point c, Color defaultColor) {
+		this.defaultColor = defaultColor;
 		points[0] = a;
 		points[1] = b;
 		points[2] = c;
@@ -22,8 +29,8 @@ public class Triangle extends Surface{
 		this(a, b, c, Color.GRAY);
 	}
 
-	public void addTextures(TexturePoint a, TexturePoint b, TexturePoint c, String texturePath) {
-		this.texturePath = texturePath;
+	public void addTextures(TexturePoint a, TexturePoint b, TexturePoint c, BufferedImage texture) {
+		this.texture = texture;
 		texturePoints = new TexturePoint[3];
 		texturePoints[0] = a;
 		texturePoints[1] = b;
@@ -60,6 +67,63 @@ public class Triangle extends Surface{
 		}
 	}
 
+	public void computeColorModifier() {
+		float totalRedLight   = 0;
+		float totalGreenLight = 0;
+		float totalBlueLight  = 0;
+
+		int redLight   = 0;
+		int greenLight = 0;
+		int blueLight  = 0;
+
+		float max = 255;
+
+		for (Map.Entry<LightView, Integer> entry : visibleLights.entrySet()) {
+			if (entry.getValue() == null) {
+				LightView lightView = entry.getKey();
+				Vector triangleToLight = new Vector(getCenterOfGravity(), lightView.getViewPoint());
+				double triangleToLightNorm = triangleToLight.getNorm();
+				double shade = normal.getScalarProduct(triangleToLight) / (normal.getNorm() * triangleToLightNorm);
+				if (lightView.isDeclining()) {
+					shade /= triangleToLightNorm;
+				}
+
+				int rgb = lightView.getRGB();
+
+				redLight   = (int)(shade*((rgb >> 16) & 0x000000FF));
+				greenLight = (int)(shade*((rgb >> 8 ) & 0x000000FF));
+				blueLight  = (int)(shade*((rgb      ) & 0x000000FF));
+
+				rgb = redLight << 16 | greenLight << 8 | blueLight;
+
+				entry.setValue(rgb);
+			} else {
+				redLight   = (entry.getValue() >> 16) & 0x000000FF;
+				greenLight = (entry.getValue() >> 8 ) & 0x000000FF;
+				blueLight  = (entry.getValue()      ) & 0x000000FF;
+			}
+			totalRedLight   += redLight;
+			totalGreenLight += greenLight;
+			totalBlueLight  += blueLight;
+		}
+		max = Math.max(max, totalRedLight);
+		max = Math.max(max, totalGreenLight);
+		max = Math.max(max, totalBlueLight);
+
+		colorModifiers[0] = totalRedLight / max;
+		colorModifiers[1] = totalGreenLight / max;
+		colorModifiers[2] = totalBlueLight / max;
+
+		needsUpdating = false;
+
+		for (float colorModifier : colorModifiers) {
+			if (colorModifier != 0) {
+				return;
+			}	
+		}
+		colorModifiers[0] = -1;
+	}
+
 	//---GETTERS---
 
 	public Vector getNormal() {
@@ -87,14 +151,33 @@ public class Triangle extends Surface{
 		return texturePoints;
 	}
 
-	public Color getColor() {
-		return color;
+	public Color getDefaultColor() {
+		return defaultColor;
 	}
 
-	//---END GETTERS---
+	public float[] getColorModifiers() {
+		if (needsUpdating) {
+			computeColorModifier();
+		}
+		return colorModifiers;
+	}
 
-	public void setColor(Color color) {
-		this.color = color;
+	public BufferedImage getTexture() {
+		return texture;
+	}
+
+	public HashMap<LightView, Integer> getVisibleLights() {
+		return visibleLights;
+	}
+
+	//---SETTERS---
+
+	public void setNeedsUpdating() {
+		needsUpdating = true;
+	}
+
+	public void setDefaultColor(Color defaultColor) {
+		this.defaultColor = defaultColor;
 	}
 
 	@Override
