@@ -46,7 +46,7 @@ public abstract class View {
 	//maps for general purpose
 	protected HashMap<Point, int[]> tempPointsInChunk = new HashMap<Point, int[]>(128);
 	protected TreeMap<Double, Triangle> trianglesInChunk = new TreeMap<Double, Triangle>(Collections.reverseOrder());
-	protected ArrayList<TreeMap<Double, Chunk>> sortedChunksByChunkLevel;
+	protected ArrayList<TreeMap<Double, Chunk>> sortedChunksByChunkLevel = new ArrayList<TreeMap<Double, Chunk>>();
 
 	//view point
 	protected Point viewPoint;
@@ -69,7 +69,6 @@ public abstract class View {
 		depthBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		gDepthBuffer = depthBuffer.getGraphics();
 
-		sortedChunksByChunkLevel = new ArrayList<TreeMap<Double, Chunk>>();
 		for (int i = 0; i < maxChunkLevel + 1; i++) {
 			sortedChunksByChunkLevel.add(i, new TreeMap<Double, Chunk>());
 		}
@@ -82,7 +81,7 @@ public abstract class View {
 		// TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(originChunkLevel - 1);
 		TreeMap<Double, Chunk> sortedChunks = new TreeMap<Double, Chunk>();
 
-		// sortedChunks.clear();
+		sortedChunks.clear();
 		
 		for (Surface surface : chunks.values()) {
 			Chunk chunk = (Chunk)surface;

@@ -5,6 +5,8 @@ import javax.swing.Timer;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.awt.*;
+import java.awt.image.AffineTransformOp;
+import java.awt.geom.AffineTransform;
 
 /** handles 2D projection of a world and movement in the world */
 public class Projecter2D extends JFrame {
@@ -53,7 +55,7 @@ public class Projecter2D extends JFrame {
 
 		views.add(new PlayerView(new Point(-300, -1500, 1516), world.getChunkLevel(), Math.PI / 2, width, height));
 		view = views.get(0);
-		views.add(new LightView(new Point(-300, -1500, 1516), world.getChunkLevel(), Math.PI / 2, 3*width, 3*height, Color.WHITE.getRGB(), false));
+		views.add(new LightView(new Point(-300, -1500, 1516), world.getChunkLevel(), Math.PI / 2, 4*width, 4*height, Color.WHITE.getRGB(), false));
 
 		for (View view : views) {
 			view.computeView(world.getChunks(), world.getChunkLevel() + 1, debugChunkLevel);
@@ -100,7 +102,15 @@ public class Projecter2D extends JFrame {
 			} else {
 				image = view.getDepthBuffer();
 			}
+
+			// BufferedImage after = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+			// AffineTransform at = new AffineTransform();
+			// at.scale(0.25, 0.25);
+			// AffineTransformOp scaleOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BICUBIC);
+			// after = scaleOp.filter(image, after);
+			// Graphics g2 = after.getGraphics();
 			Graphics g2 = image.getGraphics();
+
 			if (displayMode != 0) {
 				if (displayMode == 3) {
 					drawDebugChunks(g2, debugChunksToDraw);
@@ -110,6 +120,7 @@ public class Projecter2D extends JFrame {
 				}
 				displayDebug(g2);
 			}
+
 			g.drawImage(image, 0, 0, null);
 			needsRefresh = false;
 		}

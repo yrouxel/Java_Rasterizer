@@ -1,16 +1,19 @@
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
-import java.util.Map;
 import java.util.TreeMap;
 import java.awt.Color;
 
 public class PlayerView extends View {
 	private BufferedImage imageBuffer;
 	private Graphics gImageBuffer;
+	// private BufferedImage imageExtendedBuffer;
+	// private Graphics gImageExtendedBuffer;
 
 	public PlayerView(Point viewPoint, int maxChunkLevel, double alphaMax, int width, int height) {
 		super(viewPoint, maxChunkLevel, alphaMax, width, height);
 
+		// imageExtendedBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		// gImageExtendedBuffer = imageExtendedBuffer.getGraphics();
 		imageBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		gImageBuffer = imageBuffer.getGraphics();
 	}
@@ -45,6 +48,7 @@ public class PlayerView extends View {
 							depthBuffer.setRGB(x, y, -1);
 							firstPixelFound = true;
 
+							// rgb = (int)((1.0 - colorModifiers[0]) * (float)redTexture) << 16 | (int)((1.0 - colorModifiers[1]) * (float)greenTexture) << 8 | (int)((1.0 - colorModifiers[2]) * (float)blueTexture);
 							rgb = (int)(colorModifiers[0] * (float)redTexture) << 16 | (int)(colorModifiers[1] * (float)greenTexture) << 8 | (int)(colorModifiers[2] * (float)blueTexture);
 							imageBuffer.setRGB(x, y, rgb);
 						} else if (firstPixelFound) {
@@ -76,11 +80,43 @@ public class PlayerView extends View {
 		}
 	}
 
+	/*
+	public void downSampleImage() {
+		int totalRed;
+		int totalGreen;
+		int totalBlue;
+		int rgb;
+		int resolutionSquare = resolution * resolution;
+		for (int x = 0; x < width / resolution; x++) {
+			for (int y = 0; y < height / resolution; y++) {
+				totalRed = 0;
+				totalGreen = 0;
+				totalBlue = 0;
+				for (int i = 0; i < resolution; i++) {
+					for (int j = 0; j < resolution; j++) {
+						rgb = imageExtendedBuffer.getRGB(x * resolution + i, y * resolution + j);
+						totalRed   = (rgb >> 16) & 0x000000FF;
+						totalBlue  = (rgb >> 8 ) & 0x000000FF;
+						totalGreen = (rgb      ) & 0x000000FF;
+					}
+				}
+				totalRed   /= resolutionSquare;
+				totalBlue  /= resolutionSquare;
+				totalGreen /= resolutionSquare;
+
+				rgb = totalRed << 16 | totalGreen << 8 | totalBlue;
+				imageBuffer.setRGB(x, y, rgb);
+			}
+		}
+	}
+	*/
+
 	@Override
 	public void computeView(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {
 		gImageBuffer.setColor(Color.BLACK);
 		gImageBuffer.fillRect(0, 0, width, height);
 		super.computeView(chunks, originChunkLevel, debugChunkLevel);
+		// downSampleImage();
 	}
 
 	//---GETTERS
