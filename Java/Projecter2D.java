@@ -52,7 +52,7 @@ public class Projecter2D extends JFrame {
 		centerY =  height / 2;
 
 		Point p = new Point(-300, -1500, 1516);
-		views.add(new PlayerView(p, world.getChunkLevel(), Math.PI / 2, width, height, 2));
+		views.add(new PlayerView(p, world.getChunkLevel(), Math.PI / 2, width, height, 1));
 		view = views.get(0);
 		views.add(new LightView(p, world.getChunkLevel(), Math.PI / 2, 4*width, 4*height, Color.WHITE.getRGB(), false));
 
