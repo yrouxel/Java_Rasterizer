@@ -15,7 +15,7 @@ public class LightView extends View {
 
 	@Override
 	//iterate through it, compare with depth buffer color, check if point is inside the triangle, paint it
-	public void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax) {
+	public void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax, int areaTri) {
 		boolean triangleVisible = false;
 		boolean firstPixelFound;
 		for (int y = yMin; y < yMax; y++) {

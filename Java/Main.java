@@ -1,6 +1,6 @@
 public class Main {
 	public static void main(String[] args) {
-		World world = new World(20.0, 4);
+		World world = new World(10.0, 2);
 		Object3D obj = new Object3D();
 
 		// obj.getObjectFromFile("Objects/teapot/teapot.obj");

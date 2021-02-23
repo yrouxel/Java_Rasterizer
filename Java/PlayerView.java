@@ -8,32 +8,35 @@ public class PlayerView extends View {
 	private Graphics gImageBuffer;
 	// private BufferedImage imageExtendedBuffer;
 	// private Graphics gImageExtendedBuffer;
+	// private int resolution;
 
-	public PlayerView(Point viewPoint, int maxChunkLevel, double alphaMax, int width, int height) {
+	public PlayerView(Point viewPoint, int maxChunkLevel, double alphaMax, int width, int height, int resolution) {
 		super(viewPoint, maxChunkLevel, alphaMax, width, height);
+		// super(viewPoint, maxChunkLevel, alphaMax, width * resolution, height * resolution);
 
-		// imageExtendedBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+		// this.resolution = resolution;
+		// imageExtendedBuffer = new BufferedImage(width * resolution, height * resolution, BufferedImage.TYPE_INT_RGB);
 		// gImageExtendedBuffer = imageExtendedBuffer.getGraphics();
 		imageBuffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		gImageBuffer = imageBuffer.getGraphics();
 	}
 
 	@Override
-	public void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax) {
+	public void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax, int areaTri) {
 		float[] colorModifiers = tri.getColorModifiers();
 		if (colorModifiers[0] != -1) {
-			// BufferedImage texture = tri.getTexture();
-			// TexturePoint[] texturePoints = tri.getTexturePoints();
+			areaTri = Math.abs(areaTri);
 
-			// double areaTri = edgeFunction(vertices[1][0], vertices[1][1], vertices[2][0], vertices[2][1], vertices[0][0], vertices[0][1]);
-			// double areaTextureTri = edgeFunction(texturePoints[1].getX(), texturePoints[1].getY(), texturePoints[2].getX(), texturePoints[2].getY(), texturePoints[0].getX(), texturePoints[0].getY());
-			// double areaRatio = areaTextureTri/(2.0*areaTri);
+			BufferedImage texture = tri.getTexture();
+			TexturePoint[] texturePoints = tri.getTexturePoints();
 	
 			int redTexture   = tri.getDefaultColor().getRed();
 			int greenTexture = tri.getDefaultColor().getGreen();
 			int blueTexture  = tri.getDefaultColor().getBlue();
 	
 			int rgb;
+			double textX, textY;
 
 			boolean firstPixelFound;
 			for (int y = yMin; y < yMax; y++) {
@@ -47,6 +50,18 @@ public class PlayerView extends View {
 						if (barycentricCoord[0] != -1) {
 							depthBuffer.setRGB(x, y, -1);
 							firstPixelFound = true;
+
+							// textX = 0;
+							// textY = 0;
+							// for (int i = 0; i < 3; i++) {
+							// 	textX += texturePoints[i].getX() * barycentricCoord[i];
+							// 	textY += texturePoints[i].getY() * barycentricCoord[i];
+							// }
+
+							// rgb = texture.getRGB((int)(textX / areaTri), (int)(textY / areaTri));
+							// redTexture   = (rgb >> 16) & 0x000000FF;
+							// blueTexture  = (rgb >> 8 ) & 0x000000FF;
+							// greenTexture = (rgb      ) & 0x000000FF;
 
 							// rgb = (int)((1.0 - colorModifiers[0]) * (float)redTexture) << 16 | (int)((1.0 - colorModifiers[1]) * (float)greenTexture) << 8 | (int)((1.0 - colorModifiers[2]) * (float)blueTexture);
 							rgb = (int)(colorModifiers[0] * (float)redTexture) << 16 | (int)(colorModifiers[1] * (float)greenTexture) << 8 | (int)(colorModifiers[2] * (float)blueTexture);
@@ -80,6 +95,8 @@ public class PlayerView extends View {
 		}
 	}
 
+	
+	/** lowers down resolution to screen size to smoothen edges */
 	/*
 	public void downSampleImage() {
 		int totalRed;
@@ -108,8 +125,7 @@ public class PlayerView extends View {
 				imageBuffer.setRGB(x, y, rgb);
 			}
 		}
-	}
-	*/
+	}*/
 
 	@Override
 	public void computeView(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {

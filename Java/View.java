@@ -43,10 +43,15 @@ public abstract class View {
 	protected double cosFieldOfView;
 	protected double focalDistance;
 
+	//reusable objects
+	protected int indexNextReusableProjection = 0;
+	protected int indexNextReusableTreeMap = 0;
+	protected ArrayList<int[]> reusableProjections = new ArrayList<int[]>();
+	protected ArrayList<TreeMap<Double, Chunk>> sortedChunksByChunkLevel = new ArrayList<TreeMap<Double, Chunk>>();
+
 	//maps for general purpose
 	protected HashMap<Point, int[]> tempPointsInChunk = new HashMap<Point, int[]>(128);
 	protected TreeMap<Double, Triangle> trianglesInChunk = new TreeMap<Double, Triangle>(Collections.reverseOrder());
-	protected ArrayList<TreeMap<Double, Chunk>> sortedChunksByChunkLevel = new ArrayList<TreeMap<Double, Chunk>>();
 
 	//view point
 	protected Point viewPoint;
@@ -73,15 +78,18 @@ public abstract class View {
 			sortedChunksByChunkLevel.add(i, new TreeMap<Double, Chunk>());
 		}
 
+		for (int i = 0; i < 30; i++) {
+			reusableProjections.add(new int[2]);
+		}
+
 		addDirection(0, 0);
 	}
 
 	/** determines recursively which chunks to draw */
 	public void sortChunksAndDraw(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {
-		// TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(originChunkLevel - 1);
-		TreeMap<Double, Chunk> sortedChunks = new TreeMap<Double, Chunk>();
-
+		TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(indexNextReusableTreeMap);
 		sortedChunks.clear();
+		indexNextReusableTreeMap++;
 		
 		for (Surface surface : chunks.values()) {
 			Chunk chunk = (Chunk)surface;
@@ -111,12 +119,14 @@ public abstract class View {
 				}
 			}
 		}
+		indexNextReusableTreeMap--;
 	}
 
 	/** returns a list of visible triangles sorted by distance to camera */
 	public void sortTrianglesInChunk(Chunk chunk) {
 		tempPointsInChunk.clear();
 		trianglesInChunk.clear();
+		indexNextReusableProjection = 0;
 
 		for (Surface surface : chunk.getSmallerChunks().values()) {
 			Triangle tri = (Triangle)surface;
@@ -124,16 +134,35 @@ public abstract class View {
 
 			// Surface must be facing towards the camera
 			if (tri.getNormal().getScalarProduct(replaceableVector) > 0) {
-				trianglesInChunk.put(replaceableVector.getNorm(), tri);
-
-				//maps points in the chunk to their 2D projection
+				// here points 2D projection can be added even if all 3 points aren't visible
+				// boolean triangleVisible = true;
 				for (Point p : tri.getPoints()) {
 					if (!tempPointsInChunk.containsKey(p)) {
-						tempPointsInChunk.put(p, compute2DProjectionWithReturn(p));
+						int[] proj = getReusableProjection();
+						compute2DProjection(p, proj);
+						// if (proj == null) {
+						// 	triangleVisible = false;
+						// 	break;
+						// }
+						tempPointsInChunk.put(p, proj);
+						indexNextReusableProjection++;
 					}
 				}
+
+				// if (triangleVisible) {
+					trianglesInChunk.put(replaceableVector.getNorm(), tri);
+				// }
 			}
 		}
+	}
+
+	public int[] getReusableProjection() {
+		if (indexNextReusableProjection == reusableProjections.size()) {
+			for (int i = 0; i < 5; i++) {
+				reusableProjections.add(new int[2]);
+			}
+		}
+		return reusableProjections.get(indexNextReusableProjection);
 	}
 
 	/** returns a box containing the 2D view of the chunk if it is in screen space and contains at least one visible pixel, null otherwise */
@@ -143,12 +172,15 @@ public abstract class View {
 		int yMin = Integer.MAX_VALUE;
 		int yMax = Integer.MIN_VALUE;
 
+		boolean chunkBehind = true;
 		Point pt = chunk.getCoord();
 		for (int i = 0; i < 2; i++) {
 			for (int j = 0; j < 2; j++) {
 				for (int k = 0; k < 2; k++) {
 					replaceablePoint.replace(pt.getX() + i * chunk.getChunkSize(), pt.getY() + j * chunk.getChunkSize(), pt.getZ() + k * chunk.getChunkSize());
-					compute2DProjection(replaceablePoint);
+					if (compute2DProjection(replaceablePoint, projection)) {
+						chunkBehind = false;
+					}
 
 					xMin = Math.min(xMin, projection[0]);
 					xMax = Math.max(xMax, projection[0]);
@@ -158,8 +190,8 @@ public abstract class View {
 			}
 		}
 
-		//if the box is out of screen space
-		if (xMax < 0 || xMin >= width || yMax < 0 || yMin >= height) {
+		//if the chunk is in front of the player and if the box is out of screen space
+		if (chunkBehind && (xMax < 0 || xMin >= width || yMax < 0 || yMin >= height)) {
 			return false;
 		}
 
@@ -180,17 +212,11 @@ public abstract class View {
 	}
 
 	/** computes the coordinates of the point in the new base, then computes its 2D projection */
-	public void compute2DProjection(Point p) {
+	public boolean compute2DProjection(Point p, int[] projection) {
 		//translation
         double x = p.getX() - viewPoint.getX();
         double y = p.getY() - viewPoint.getY();
         double z = p.getZ() - viewPoint.getZ();
-
-		// Vector vec = new Vector(p, viewPoint);
-
-		// if ((vec.getScalarProduct(directionV) / vec.getNorm()) < cosfieldOfView) {
-		// 	return;
-		// }
 
         double xBefore = x;
 
@@ -201,42 +227,16 @@ public abstract class View {
         //phi rotation
         y = yBefore*cosPhi + z*sinPhi;
 		z = z*cosPhi - yBefore*sinPhi;
-		
-		//2D Projection
-		projection[0] = (int)(centerX + x * focalDistance / y);
-		projection[1] = (int)(centerY - z * focalDistance / y);
-    }
 
-	/** same function as above, but returns the result */
-	public int[] compute2DProjectionWithReturn(Point p) {
-		//translation
-		int[] projection = new int[2];
-
-        double x = p.getX() - viewPoint.getX();
-        double y = p.getY() - viewPoint.getY();
-        double z = p.getZ() - viewPoint.getZ();
-
-		// Vector vec = new Vector(p, viewPoint);
-
-		// if ((vec.getScalarProduct(directionV) / vec.getNorm()) < cosFieldOfView) {
-		// 	return null;
+		// if (z < cosFieldOfView && x < cosFieldOfView * width) {
+		// 	return false;
 		// }
-
-        double xBefore = x;
-
-        //theta rotation
-        x = xBefore * cosTheta + y * sinTheta;
-        double yBefore = y*cosTheta - xBefore*sinTheta;
-
-        //phi rotation
-        y = yBefore*cosPhi + z*sinPhi;
-		z = z*cosPhi - yBefore*sinPhi;
 		
 		//2D Projection
-		projection[0] = (int)(centerX + x * focalDistance / y);
-		projection[1] = (int)(centerY - z * focalDistance / y);
+		projection[0] = centerX + (int)(x * focalDistance / y);
+		projection[1] = centerY - (int)(z * focalDistance / y);
 
-		return projection;
+		return true;
     }
 
 	/** draws the triangle found in trianglesInChunk with clipping and depthbuffer drawing */
@@ -270,13 +270,17 @@ public abstract class View {
 					coordDiffs[i][0] = vertices[iLastVert][0] - vertices[i][0];
 					coordDiffs[i][1] = vertices[iLastVert][1] - vertices[i][1];
 				}
-
-				drawFunction(tri, xMin, xMax, yMin, yMax);
+				
+				// if triangle contains at least 1 pixel
+				int areaTri = coordDiffs[1][0] * coordDiffs[0][1] - coordDiffs[0][0] * coordDiffs[1][1];
+				if (areaTri != 0) {
+					drawFunction(tri, xMin, xMax, yMin, yMax, areaTri);
+				}
 			}
 		}
 	}
 
-	public abstract void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax);
+	public abstract void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax, int areaTri);
 
 	/** checks if a given point is a triangle by a methode of cross products */
 	public void computeBarycentricCoords(int ptX){

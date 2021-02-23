@@ -37,7 +37,6 @@ public class Object3D {
 
 	public void getObjectFromFile(String path) {
 		try {
-			//default buffer size = 8192
 			BufferedReader br = new BufferedReader(new FileReader(path), 100000); 
 
 			ArrayList<Point> points = new ArrayList<Point>();
@@ -60,13 +59,11 @@ public class Object3D {
 				if (elements[0].equals("v")) {
 					points.add(new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[3]), Double.parseDouble(elements[2])));
 				} else if (elements[0].equals("vt")) {
-					int x = (int)(Double.parseDouble(elements[1]) * width);
-					int y = (int)(Double.parseDouble(elements[2]) * height);
-					texturesPoints.add(new TexturePoint(x, y));
+					texturesPoints.add(new TexturePoint(Double.parseDouble(elements[1]) * width, Double.parseDouble(elements[2]) * height));
 				} else if (elements[0].equals("f")) {
 					if (elements.length == 4) {
 						Triangle tri = new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1));
-						// tri.addTextures(texturesPoints.get(Integer.valueOf(elements[1].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[2].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[3].split("/")[1])-1), texturePath);
+						tri.addTextures(texturesPoints.get(Integer.valueOf(elements[3].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[1].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[2].split("/")[1])-1), texture);
 						// tri.setColor(computeTriangleColor(tri));
 						triangles.add(tri);
 					} else if (elements.length == 5) {
@@ -84,6 +81,7 @@ public class Object3D {
 		}
 	}
 
+	/*
 	public Color computeTriangleColor(Triangle tri) {
 		int xMin = Integer.MAX_VALUE;
 		int xMax = Integer.MIN_VALUE;
@@ -111,7 +109,7 @@ public class Object3D {
 		for (int y = yMin; y < yMax; y++) {
 			boolean firstPixelFound = false;
 			for (int x = xMin; x < xMax; x++) {
-				if (isPointInTriangle(x + 0.5, y + 0.5, tp[0].getX(), tp[0].getY(), tp[1].getX(), tp[1].getY(), tp[2].getX(), tp[2].getY())) {
+				if (isPointInTriangle(x, y, tp[0].getX(), tp[0].getY(), tp[1].getX(), tp[1].getY(), tp[2].getX(), tp[2].getY())) {
 					if (!firstPixelFound) {
 						firstPixelFound = true;
 					}
@@ -135,7 +133,7 @@ public class Object3D {
 		} else {
 			return Color.GRAY;
 		}
-	}
+	}*/
 
 	/** returns the sign of the cross product */
 	public boolean edgeFunction(double x1, double y1, double x2, double y2, double x3, double y3) {
