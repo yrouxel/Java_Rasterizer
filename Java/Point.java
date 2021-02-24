@@ -1,37 +1,33 @@
 public class Point implements Comparable<Point> {
     private double x, y, z;
 
-    public Point() {
-        this.x = 0;
-        this.y = 0;
-        this.z = 0;
-    }
+    public Point() {}
  
     public Point(double x, double y, double z) { 
-		replace(x, y, z); 
+		setPoint(x, y, z); 
     }
     
     public Point(Point clone) {
-        replace(clone);
+        setPoint(clone);
     }
 
     public Point(Point clone, Vector vec, double scalar) {
-        replace(clone, vec, scalar);
+        setPoint(clone, vec, scalar);
     }
 
-    public void replace(Point clone) {
+    public void setPoint(Point clone) {
         this.x = clone.x;
         this.y = clone.y;
         this.z = clone.z;
     }
 
-    public void replace(double x, double y, double z) { 
+    public void setPoint(double x, double y, double z) { 
 		this.x = x;
 		this.y = y;
 		this.z = z; 
     }
 
-    public void replace(Point clone, Vector vec, double scalar) {
+    public void setPoint(Point clone, Vector vec, double scalar) {
         this.x = clone.x + vec.getX() * scalar;
         this.y = clone.y + vec.getY() * scalar;
         this.z = clone.z + vec.getZ() * scalar;

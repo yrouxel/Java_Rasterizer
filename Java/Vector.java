@@ -1,11 +1,7 @@
 public class Vector {
 	private double x, y, z;
 
-	public Vector() {
-        this.x = 0;
-        this.y = 0;
-        this.z = 0;
-    }
+	public Vector() {}
 
 	public Vector(double x, double y, double z) {
 		setVector(x, y, z);

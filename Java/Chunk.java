@@ -3,7 +3,7 @@ import java.util.TreeMap;
 import java.awt.image.BufferedImage;
 
 /** base brick of the world, each chunk contains sub elements */
-public class Chunk extends Surface {
+public class Chunk extends Surface implements Comparable<Chunk> {
 	private BufferedImage texture;
 
 	private Point coord;
@@ -17,6 +17,7 @@ public class Chunk extends Surface {
 	private Vector normal;
 	private double coneAngle;
 	private double totalSurface;
+	private double distanceToPoint;
 
 	public Chunk() {}
 
@@ -146,6 +147,10 @@ public class Chunk extends Surface {
 		return true;
 	}
 
+	public double getDistanceToPoint() {
+		return distanceToPoint;
+	}
+
 	//---SETTERS---
 
 	public void setTexture(BufferedImage texture) {
@@ -154,5 +159,20 @@ public class Chunk extends Surface {
 
 	public void setSmallerChunks(TreeMap<Point, Surface> smallerChunks) {
 		this.smallerChunks = smallerChunks;
+	}
+
+	 public void setDistanceToPoint(double distanceToPoint) {
+		this.distanceToPoint = distanceToPoint;
+	}
+
+	@Override
+	public int compareTo(Chunk chunk) {
+		if (distanceToPoint == chunk.getDistanceToPoint()) {
+			return coord.compareTo(chunk.getCoord());
+		} else if (distanceToPoint < chunk.getDistanceToPoint()) {
+			return 1;
+		} else {
+			return -1;
+		}
 	}
 }

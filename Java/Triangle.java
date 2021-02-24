@@ -61,7 +61,7 @@ public class Triangle extends Surface{
 	public void replacePoint(Point a, Point b) {
 		for (int i = 0; i < 3; i++) {
 			if (points[i].equals(a)) {
-				points[i].replace(b);
+				points[i].setPoint(b);
 				break;
 			}
 		}
@@ -135,12 +135,19 @@ public class Triangle extends Surface{
 	}
 
 	public Point getCenterOfGravity() {
-		Point g = new Point(0, 0, 0);
+		Point g = new Point();
 		g.add(points[0]);
 		g.add(points[1]);
 		g.add(points[2]);
 		g.multiply(1.0/3.0);
 		return g;
+	}
+
+	public void getCenterOfGravity(Point g) {
+		g.setPoint(points[0]);
+		g.add(points[1]);
+		g.add(points[2]);
+		g.multiply(1.0/3.0);
 	}
 
 	public Point[] getPoints() {

@@ -1,12 +1,23 @@
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.awt.Graphics;
 import java.awt.*;
 
 public abstract class View {
+	//provides an ordering without duplicate
+	protected final Comparator<Double> doubleComparator = new Comparator<Double>() {
+		public int compare(Double d1, Double d2) {	
+			if (d1 < d2) {
+				return -1;
+			} else {
+				return 1;
+			}
+		}
+	};
+
 	//dimension variables
 	protected int width;
 	protected int height;
@@ -51,7 +62,7 @@ public abstract class View {
 
 	//maps for general purpose
 	protected HashMap<Point, int[]> tempPointsInChunk = new HashMap<Point, int[]>(128);
-	protected TreeMap<Double, Triangle> trianglesInChunk = new TreeMap<Double, Triangle>(Collections.reverseOrder());
+	protected TreeMap<Double, Triangle> trianglesInChunk = new TreeMap<Double, Triangle>(doubleComparator);
 
 	//view point
 	protected Point viewPoint;
@@ -75,7 +86,7 @@ public abstract class View {
 		gDepthBuffer = depthBuffer.getGraphics();
 
 		for (int i = 0; i < maxChunkLevel + 1; i++) {
-			sortedChunksByChunkLevel.add(i, new TreeMap<Double, Chunk>());
+			sortedChunksByChunkLevel.add(i, new TreeMap<Double, Chunk>(doubleComparator));
 		}
 
 		for (int i = 0; i < 30; i++) {
@@ -87,6 +98,7 @@ public abstract class View {
 
 	/** determines recursively which chunks to draw */
 	public void sortChunksAndDraw(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {
+		// TreeMap<Double, Chunk> sortedChunks = new TreeMap<Double, Chunk>();
 		TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(indexNextReusableTreeMap);
 		sortedChunks.clear();
 		indexNextReusableTreeMap++;
@@ -130,7 +142,9 @@ public abstract class View {
 
 		for (Surface surface : chunk.getSmallerChunks().values()) {
 			Triangle tri = (Triangle)surface;
-			replaceableVector.setVector(tri.getCenterOfGravity(), viewPoint);
+			tri.getCenterOfGravity(replaceablePoint);
+			replaceableVector.setVector(replaceablePoint, viewPoint);
+			// replaceableVector.setVector(tri.getCenterOfGravity(), viewPoint);
 
 			// Surface must be facing towards the camera
 			if (tri.getNormal().getScalarProduct(replaceableVector) > 0) {
@@ -139,6 +153,7 @@ public abstract class View {
 				for (Point p : tri.getPoints()) {
 					if (!tempPointsInChunk.containsKey(p)) {
 						int[] proj = getReusableProjection();
+						// int[] proj = new int[2];
 						compute2DProjection(p, proj);
 						// if (proj == null) {
 						// 	triangleVisible = false;
@@ -156,15 +171,6 @@ public abstract class View {
 		}
 	}
 
-	public int[] getReusableProjection() {
-		if (indexNextReusableProjection == reusableProjections.size()) {
-			for (int i = 0; i < 5; i++) {
-				reusableProjections.add(new int[2]);
-			}
-		}
-		return reusableProjections.get(indexNextReusableProjection);
-	}
-
 	/** returns a box containing the 2D view of the chunk if it is in screen space and contains at least one visible pixel, null otherwise */
 	public boolean isChunkVisible(Chunk chunk) {
 		int xMin = Integer.MAX_VALUE;
@@ -172,15 +178,16 @@ public abstract class View {
 		int yMin = Integer.MAX_VALUE;
 		int yMax = Integer.MIN_VALUE;
 
-		boolean chunkBehind = true;
+		// boolean chunkBehind = true;
 		Point pt = chunk.getCoord();
 		for (int i = 0; i < 2; i++) {
 			for (int j = 0; j < 2; j++) {
 				for (int k = 0; k < 2; k++) {
-					replaceablePoint.replace(pt.getX() + i * chunk.getChunkSize(), pt.getY() + j * chunk.getChunkSize(), pt.getZ() + k * chunk.getChunkSize());
-					if (compute2DProjection(replaceablePoint, projection)) {
-						chunkBehind = false;
-					}
+					replaceablePoint.setPoint(pt.getX() + i * chunk.getChunkSize(), pt.getY() + j * chunk.getChunkSize(), pt.getZ() + k * chunk.getChunkSize());
+					compute2DProjection(replaceablePoint, projection);
+					// if (compute2DProjection(replaceablePoint, projection)) {
+						// chunkBehind = false;
+					// }
 
 					xMin = Math.min(xMin, projection[0]);
 					xMax = Math.max(xMax, projection[0]);
@@ -191,7 +198,8 @@ public abstract class View {
 		}
 
 		//if the chunk is in front of the player and if the box is out of screen space
-		if (chunkBehind && (xMax < 0 || xMin >= width || yMax < 0 || yMin >= height)) {
+		if (xMax < 0 || xMin >= width || yMax < 0 || yMin >= height) {
+		// if (chunkBehind && (xMax < 0 || xMin >= width || yMax < 0 || yMin >= height)) {
 			return false;
 		}
 
@@ -199,6 +207,10 @@ public abstract class View {
 		xMax = Math.min((int)width-1, xMax);
 		yMin = Math.max(0, yMin);
 		yMax = Math.min((int)height-1, yMax);
+
+		if (yMin == yMax) {
+			return false;
+		}
 
 		//if at least one pixel is visible (black) in depth buffer
 		for (int i = xMin; i < xMax; i++) {
@@ -209,6 +221,16 @@ public abstract class View {
 			}
 		}
 		return false;
+	}
+
+	/* returns a useable array for projection from a pool, extends the pool if necessary */
+	public int[] getReusableProjection() {
+		if (indexNextReusableProjection == reusableProjections.size()) {
+			for (int i = 0; i < 5; i++) {
+				reusableProjections.add(new int[2]);
+			}
+		}
+		return reusableProjections.get(indexNextReusableProjection);
 	}
 
 	/** computes the coordinates of the point in the new base, then computes its 2D projection */
@@ -260,11 +282,6 @@ public abstract class View {
 
 			//if box is at least partially inside screen space clip it
 			if (xMax >= 0 && xMin < width && yMax >= 0 && yMin < height) {
-				xMin = Math.max(0, xMin);
-				xMax = Math.min((int)width-1, xMax);
-				yMin = Math.max(0, yMin);
-				yMax = Math.min((int)height-1, yMax);
-
 				for (int i = 0; i < 3; i++) {
 					int iLastVert = (i+2)%3;
 					coordDiffs[i][0] = vertices[iLastVert][0] - vertices[i][0];
@@ -274,6 +291,11 @@ public abstract class View {
 				// if triangle contains at least 1 pixel
 				int areaTri = coordDiffs[1][0] * coordDiffs[0][1] - coordDiffs[0][0] * coordDiffs[1][1];
 				if (areaTri != 0) {
+					xMin = Math.max(0, xMin);
+					xMax = Math.min((int)width-1, xMax);
+					yMin = Math.max(0, yMin);
+					yMax = Math.min((int)height-1, yMax);
+	
 					drawFunction(tri, xMin, xMax, yMin, yMax, areaTri);
 				}
 			}
