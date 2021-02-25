@@ -1,23 +1,11 @@
-import java.util.Map;
 import java.util.TreeMap;
-import java.awt.image.BufferedImage;
 
 /** base brick of the world, each chunk contains sub elements */
-public class Chunk extends Surface implements Comparable<Chunk> {
-	private BufferedImage texture;
-
+public class Chunk {
 	private Point coord;
 	private Double chunkSize;
 	private int chunkLevel;
-	private TreeMap<Point, Surface> smallerChunks = new TreeMap<Point, Surface>();
-
-	private boolean alwaysVisible = false;
-	private Point centerOfGravity;
-	private Point coneTop;
-	private Vector normal;
-	private double coneAngle;
-	private double totalSurface;
-	private double distanceToPoint;
+	private TreeMap<Point, Object> smallerChunks = new TreeMap<Point, Object>();
 
 	public Chunk() {}
 
@@ -27,69 +15,7 @@ public class Chunk extends Surface implements Comparable<Chunk> {
 		this.chunkLevel = chunkLevel;
 	}
 
-	/** computes an normale and a center of gravity (ponderated average)
-	 * if normal == 0, the surface is closed
-	 */
-	public void computeVisibilityCone() {
-		centerOfGravity = new Point();
-		normal = new Vector();
-		totalSurface = 0;
-
-		for (Surface surface : smallerChunks.values()) {
-			if (chunkLevel > 0) {
-				((Chunk)surface).computeVisibilityCone();
-			}
-			totalSurface += surface.getTotalSurface();
-			centerOfGravity.add(surface.getCenterOfGravity());
-			normal.add(surface.getNormal());
-		}
-
-		Surface maxSurface = getSortedSurfacesByScalarProduct();
-		if (maxSurface != null) {
-			double d = new Vector(maxSurface.getCenterOfGravity(), centerOfGravity).getScalarProduct(maxSurface.getNormal()) / normal.getScalarProduct(maxSurface.getNormal());
-			coneTop = new Point(centerOfGravity, normal, d);
-
-			Vector closestLine = normal.getCrossProduct(maxSurface.getNormal()).getCrossProduct(maxSurface.getNormal());
-			coneAngle = normal.getScalarProduct(closestLine) / (normal.getNorm() * closestLine.getNorm());
-		} else {
-			alwaysVisible = true;
-		}
-	}
-
-	public Surface getSortedSurfacesByScalarProduct() {
-		if (normal.getNorm() == 0) {
-			return null;
-		}
-
-		Surface maxSurface = null;
-		double minScalarProduct = 0;
-
-		for (Map.Entry<Point, Surface> entry : smallerChunks.entrySet()) {
-			double scalarProduct = entry.getValue().getNormal().getScalarProduct(normal);
-			if (scalarProduct <= 0) {
-				return null;
-			}
-			if (minScalarProduct < -scalarProduct) {
-				minScalarProduct = -scalarProduct;
-				maxSurface = entry.getValue();
-			}
-		}
-		return maxSurface;
-	}
-
 	//---GETTERS---
-	
-	public Point getCenterOfGravity() {
-		return centerOfGravity;
-	}
-
-	public Vector getNormal() {
-		return normal;
-	}
-
-	public double getTotalSurface() {
-		return totalSurface;
-	}
 
 	public Point getCoord() {
 		return coord;
@@ -119,15 +45,13 @@ public class Chunk extends Surface implements Comparable<Chunk> {
 	}
 
 	/** takes the size of the chunk, returns its middle point */
-	public Point getCenter() {
-		Point pt = new Point(1, 1, 1);
-		pt.multiply(chunkSize/2);
-		pt.add(coord);
-
-		return pt;
+	public void computeCenter(Point center) {
+		center.setPoint(1, 1, 1);
+		center.multiply(chunkSize/2);
+		center.add(coord);
 	}
 
-	public TreeMap<Point, Surface> getSmallerChunks() {
+	public TreeMap<Point, Object> getSmallerChunks() {
 		return smallerChunks;
 	}
 
@@ -135,44 +59,9 @@ public class Chunk extends Surface implements Comparable<Chunk> {
 		return chunkSize;
 	}
 
-	public Point getConeTop() {
-		return coneTop;
-	}
-
-	public double getConeAngle() {
-		return coneAngle;
-	}
-
-	public boolean isAlwaysVisible() {
-		return true;
-	}
-
-	public double getDistanceToPoint() {
-		return distanceToPoint;
-	}
-
 	//---SETTERS---
 
-	public void setTexture(BufferedImage texture) {
-		this.texture = texture;
-	}
-
-	public void setSmallerChunks(TreeMap<Point, Surface> smallerChunks) {
+	public void setSmallerChunks(TreeMap<Point, Object> smallerChunks) {
 		this.smallerChunks = smallerChunks;
-	}
-
-	 public void setDistanceToPoint(double distanceToPoint) {
-		this.distanceToPoint = distanceToPoint;
-	}
-
-	@Override
-	public int compareTo(Chunk chunk) {
-		if (distanceToPoint == chunk.getDistanceToPoint()) {
-			return coord.compareTo(chunk.getCoord());
-		} else if (distanceToPoint < chunk.getDistanceToPoint()) {
-			return 1;
-		} else {
-			return -1;
-		}
 	}
 }

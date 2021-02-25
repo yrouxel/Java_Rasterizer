@@ -67,32 +67,6 @@ public class Point implements Comparable<Point> {
         return Math.sqrt(x*x + y*y + z*z);
     }
 
-    public Point getPointNewBase(Point camera, double theta, double phi) {
-        Point pt = new Point(x, y, z);
-        pt.substract(camera);
-        pt.rotate(theta, phi);
-        return pt;
-    }
-
-    //same function with less function calls
-    public Point getPointNewBaseOptimized(Point camera, double cosTheta, double sinTheta, double cosPhi, double sinPhi) {
-        double x2 = x - camera.getX();
-        double y2 = y - camera.getY();
-        double z2 = z - camera.getZ();
-
-        double xBefore = x2;
-
-        //theta rotation
-        x2 = xBefore*cosTheta + y2*sinTheta;
-        double yBefore = y2*cosTheta - xBefore*sinTheta;
-
-        //phi rotation
-        y2 = yBefore*cosPhi + z2*sinPhi;
-        z2 = z2*cosPhi - yBefore*sinPhi;
-
-        return new Point(x2, y2, z2);
-    }
-
     public void substract(Point pt) {
         x -= pt.x;
         y -= pt.y;
@@ -111,16 +85,16 @@ public class Point implements Comparable<Point> {
         z *= a;
     }
     
-    public void rotate(double theta, double phi) {
+    public void rotate(double cosTheta, double sinTheta, double cosPhi, double sinPhi) {
         double xBefore = x;
 
         //theta rotation
-        x = xBefore*Math.cos(theta) + y*Math.sin(theta);
-        double yBefore = y*Math.cos(theta) - xBefore*Math.sin(theta);
+        x = xBefore * cosTheta + y * sinTheta;
+        double yBefore = y*cosTheta - xBefore*sinTheta;
 
         //phi rotation
-        y = yBefore*Math.cos(phi) + z*Math.sin(phi);
-        z = z*Math.cos(phi) - yBefore*Math.sin(phi);
+        y = yBefore*cosPhi + z*sinPhi;
+		z = z*cosPhi - yBefore*sinPhi;
     }
 
     @Override

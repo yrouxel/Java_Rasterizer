@@ -51,16 +51,16 @@ public class Vector {
 		z += v.z;
 	}
 
-    public void rotate(double theta, double phi) {
+    public void rotate(double cosTheta, double sinTheta, double cosPhi, double sinPhi) {
         double xBefore = x;
 
         //theta rotation
-        x = xBefore*Math.cos(theta) + y*Math.sin(theta);
-        double yBefore = y*Math.cos(theta) - xBefore*Math.sin(theta);
+        x = xBefore * cosTheta + y * sinTheta;
+        double yBefore = y*cosTheta - xBefore*sinTheta;
 
         //phi rotation
-        y = yBefore*Math.cos(phi) + z*Math.sin(phi);
-        z = z*Math.cos(phi) - yBefore*Math.sin(phi);
+        y = yBefore*cosPhi + z*sinPhi;
+		z = z*cosPhi - yBefore*sinPhi;
     }
 	
 	public double getNorm() {

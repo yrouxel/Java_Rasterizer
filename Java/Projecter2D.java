@@ -52,9 +52,10 @@ public class Projecter2D extends JFrame {
 		centerY =  height / 2;
 
 		Point p = new Point(-300, -1500, 1516);
+		// Point p = new Point(0, 0, 0);
 		views.add(new PlayerView(p, world.getChunkLevel(), Math.PI / 2, width, height, 1));
 		view = views.get(0);
-		views.add(new LightView(p, world.getChunkLevel(), Math.PI / 2, 4*width, 4*height, Color.WHITE.getRGB(), false));
+		views.add(new LightView(p, world.getChunkLevel(), Math.PI / 2, 3*width, 3*height, Color.WHITE.getRGB(), false));
 
 		for (View view : views) {
 			// view.addDirection(Math.PI, 0);
@@ -92,8 +93,9 @@ public class Projecter2D extends JFrame {
 		robot.mouseMove(centerX, centerY);
 	}
 
+	@Override
 	public void paint(Graphics g) {
-		// if (needsRefresh) {
+		if (needsRefresh) {
 			startTime = System.currentTimeMillis();
 			// for (View view : views) {
 				view.computeView(world.getChunks(), world.getChunkLevel() + 1, debugChunkLevel);
@@ -118,16 +120,16 @@ public class Projecter2D extends JFrame {
 
 			g.drawImage(image, 0, 0, null);
 			needsRefresh = false;
-		// }
+		}
 	}
 
 	public void displayDebug(Graphics g) {
-		Vector directionV = new Vector(0, 1, 0);
-		directionV.rotate(view.getTheta(), view.getPhi());
+		// Vector directionV = new Vector(0, 1, 0);
+		// directionV.rotate(view.getTheta(), view.getPhi());
 		Point viewPoint = view.getViewPoint();
 		g.setColor(Color.WHITE);
 		g.drawString("(" + (int)viewPoint.getX() + ", " + (int)viewPoint.getY() + ", " + (int)viewPoint.getZ() + ")", 20, 20);
-		g.drawString("(" + directionV.getX() + ", " + directionV.getY() + ", " + directionV.getZ() + ")", 20, 40);
+		// g.drawString("(" + directionV.getX() + ", " + directionV.getY() + ", " + directionV.getZ() + ")", 20, 40);
 		g.drawString("REFRESH TIME : " + (System.currentTimeMillis() - startTime) + " ms", 20, 60);
 		g.drawString("DISPLAYING : " + debugChunksToDraw.size() + " chunks\n", 20, 80);
 		g.drawString("CHUNK LEVEL : " + debugChunkLevel, 20, 100);
@@ -224,8 +226,8 @@ public class Projecter2D extends JFrame {
 				if (displayMode == 3) {
 					debugChunksToDraw.clear();
 					lastDisplayedChunk = null;
-					for (Surface surface : world.getChunks().values()) {
-						debugChunksToDraw.add((Chunk)surface);
+					for (Object object : world.getChunks().values()) {
+						debugChunksToDraw.add((Chunk)object);
 					}
 					nextDisplayedChunk = debugChunksToDraw.get(0);
 				} else if (displayMode == 5) {
@@ -244,16 +246,16 @@ public class Projecter2D extends JFrame {
 				lastDisplayedChunk = nextDisplayedChunk;
 
 				debugChunksToDraw.clear();
-				for (Surface surface : lastDisplayedChunk.getSmallerChunks().values()) {
-					debugChunksToDraw.add((Chunk)surface);
+				for (Object object : lastDisplayedChunk.getSmallerChunks().values()) {
+					debugChunksToDraw.add((Chunk)object);
 				}				
 				nextDisplayedChunk = debugChunksToDraw.get(0);
 			} else if (key == 'v') {
 				lastDisplayedChunk = null;
 
 				debugChunksToDraw.clear();
-				for (Surface surface : world.getChunks().values()) {
-					debugChunksToDraw.add((Chunk)surface);
+				for (Object object : world.getChunks().values()) {
+					debugChunksToDraw.add((Chunk)object);
 				}
 				nextDisplayedChunk = debugChunksToDraw.get(0);
 			}

@@ -79,10 +79,8 @@ public class LightView extends View {
 	}
 
 	@Override
-	public void computeView(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {
+	public void computeView(TreeMap<Point, Object> chunks, int originChunkLevel, int debugChunkLevel) {
 		super.computeView(chunks, originChunkLevel, debugChunkLevel);
-		// System.out.println("LAST VISIBLE TRIANGLES : " + lastVisibleTriangles.size());
-		// System.out.println("NEXT VISIBLE TRIANGLES : " + nextVisibleTriangles.size());
 		updateLight(false);
 	}
 

@@ -4,7 +4,7 @@ import java.util.Map;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 
-public class Triangle extends Surface{
+public class Triangle{
 	private Point points[] = new Point[3];
 	private Vector normal;
 

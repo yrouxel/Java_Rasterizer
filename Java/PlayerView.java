@@ -62,17 +62,17 @@ public class PlayerView extends View {
 							depthBuffer.setRGB(x, y, -1);
 							firstPixelFound = true;
 
-							// textX = 0;
-							// textY = 0;
-							// for (int i = 0; i < 3; i++) {
-							// 	textX += texturePoints[i].getX() * barycentricCoord[i];
-							// 	textY += texturePoints[i].getY() * barycentricCoord[i];
-							// }
+							textX = 0;
+							textY = 0;
+							for (int i = 0; i < 3; i++) {
+								textX += texturePoints[i].getX() * barycentricCoord[i];
+								textY += texturePoints[i].getY() * barycentricCoord[i];
+							}
 
-							// rgb = texture.getRGB((int)(textX / areaTri), (int)(textY / areaTri));
-							// redTexture   = (rgb >> 16) & 0x000000FF;
-							// blueTexture  = (rgb >> 8 ) & 0x000000FF;
-							// greenTexture = (rgb      ) & 0x000000FF;
+							rgb = texture.getRGB((int)(textX / areaTri), (int)(textY / areaTri));
+							redTexture   = (rgb >> 16) & 0x000000FF;
+							blueTexture  = (rgb >> 8 ) & 0x000000FF;
+							greenTexture = (rgb      ) & 0x000000FF;
 
 							// rgb = (int)((1.0 - colorModifiers[0]) * (float)redTexture) << 16 | (int)((1.0 - colorModifiers[1]) * (float)greenTexture) << 8 | (int)((1.0 - colorModifiers[2]) * (float)blueTexture);
 							rgb = (int)(colorModifiers[0] * (float)redTexture) << 16 | (int)(colorModifiers[1] * (float)greenTexture) << 8 | (int)(colorModifiers[2] * (float)blueTexture);
@@ -139,7 +139,7 @@ public class PlayerView extends View {
 	}
 
 	@Override
-	public void computeView(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {
+	public void computeView(TreeMap<Point, Object> chunks, int originChunkLevel, int debugChunkLevel) {
 		// gImageExtendedBuffer.setColor(Color.BLACK);
 		// gImageExtendedBuffer.fillRect(0, 0, width, height);
 		gImageBuffer.setColor(Color.BLACK);

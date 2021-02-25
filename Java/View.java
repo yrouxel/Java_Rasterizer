@@ -97,15 +97,16 @@ public abstract class View {
 	}
 
 	/** determines recursively which chunks to draw */
-	public void sortChunksAndDraw(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {
+	public void sortChunksAndDraw(TreeMap<Point, Object> chunks, int originChunkLevel, int debugChunkLevel) {
 		// TreeMap<Double, Chunk> sortedChunks = new TreeMap<Double, Chunk>();
 		TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(indexNextReusableTreeMap);
 		sortedChunks.clear();
 		indexNextReusableTreeMap++;
 		
-		for (Surface surface : chunks.values()) {
-			Chunk chunk = (Chunk)surface;
-			replaceableVector.setVector(chunk.getCenter(), viewPoint);
+		for (Object object : chunks.values()) {
+			Chunk chunk = (Chunk)object;
+			chunk.computeCenter(replaceablePoint);
+			replaceableVector.setVector(replaceablePoint, viewPoint);
 			sortedChunks.put(replaceableVector.getNorm(), chunk);
 		}
 
@@ -140,13 +141,13 @@ public abstract class View {
 		trianglesInChunk.clear();
 		indexNextReusableProjection = 0;
 
-		for (Surface surface : chunk.getSmallerChunks().values()) {
-			Triangle tri = (Triangle)surface;
+		for (Object object : chunk.getSmallerChunks().values()) {
+			Triangle tri = (Triangle)object;
 			tri.getCenterOfGravity(replaceablePoint);
 			replaceableVector.setVector(replaceablePoint, viewPoint);
 			// replaceableVector.setVector(tri.getCenterOfGravity(), viewPoint);
 
-			// Surface must be facing towards the camera
+			// Object must be facing towards the camera
 			if (tri.getNormal().getScalarProduct(replaceableVector) > 0) {
 				// here points 2D projection can be added even if all 3 points aren't visible
 				// boolean triangleVisible = true;
@@ -316,7 +317,7 @@ public abstract class View {
 		}
 	}
 
-	public void computeView(TreeMap<Point, Surface> chunks, int originChunkLevel, int debugChunkLevel) {
+	public void computeView(TreeMap<Point, Object> chunks, int originChunkLevel, int debugChunkLevel) {
 		gDepthBuffer.setColor(Color.BLACK);
 		gDepthBuffer.fillRect(0, 0, width, height);
 		
@@ -359,7 +360,7 @@ public abstract class View {
 	}
 
 	public void addViewPoint(Point viewPointPlus) {
-		viewPointPlus.rotate(theta, phi);
+		viewPointPlus.rotate(cosTheta, -sinTheta, cosPhi, -sinPhi);
 		viewPoint.add(viewPointPlus);
 	}
 
