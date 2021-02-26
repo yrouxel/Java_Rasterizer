@@ -107,7 +107,7 @@ public abstract class View {
 			Chunk chunk = (Chunk)object;
 			chunk.computeCenter(replaceablePoint);
 			replaceableVector.setVector(replaceablePoint, viewPoint);
-			sortedChunks.put(replaceableVector.getNorm(), chunk);
+			sortedChunks.put(replaceableVector.getSquareNorm(), chunk);
 		}
 
 		for (Chunk chunk : sortedChunks.values()) {
@@ -166,7 +166,7 @@ public abstract class View {
 				}
 
 				// if (triangleVisible) {
-					trianglesInChunk.put(replaceableVector.getNorm(), tri);
+					trianglesInChunk.put(replaceableVector.getSquareNorm(), tri);
 				// }
 			}
 		}

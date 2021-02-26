@@ -67,6 +67,10 @@ public class Vector {
         return Math.sqrt(x*x + y*y + z*z);
     }
 
+	public double getSquareNorm() {
+		return x*x + y*y + z*z;
+	}
+
 	public Vector getCrossProduct(Vector b) {
 		return new Vector(y*b.z - z*b.y, z*b.x - x*b.z, x*b.y - y*b.x);
 	}
