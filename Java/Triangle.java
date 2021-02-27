@@ -21,8 +21,6 @@ public class Triangle{
 		points[0] = a;
 		points[1] = b;
 		points[2] = c;
-		normal = new Vector(points[1], points[0]).getCrossProduct(new Vector(points[2], points[1]));
-		normal.normalize();
 	}
 
 	public Triangle(Point a, Point b, Point c) {
@@ -127,6 +125,10 @@ public class Triangle{
 	//---GETTERS---
 
 	public Vector getNormal() {
+		if (normal == null) {
+			normal = new Vector(points[1], points[0]).getCrossProduct(new Vector(points[2], points[1]));
+			normal.normalize();
+		}
 		return normal;
 	}
 

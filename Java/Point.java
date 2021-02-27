@@ -63,10 +63,6 @@ public class Point implements Comparable<Point> {
         return p;
     }
 
-    public double getNorm() {
-        return Math.sqrt(x*x + y*y + z*z);
-    }
-
     public void substract(Point pt) {
         x -= pt.x;
         y -= pt.y;

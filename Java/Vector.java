@@ -72,7 +72,8 @@ public class Vector {
 	}
 
 	public Vector getCrossProduct(Vector b) {
-		return new Vector(y*b.z - z*b.y, z*b.x - x*b.z, x*b.y - y*b.x);
+		b.setVector(y*b.z - z*b.y, z*b.x - x*b.z, x*b.y - y*b.x);
+		return b;
 	}
 
 	public double getScalarProduct(Vector v) {
