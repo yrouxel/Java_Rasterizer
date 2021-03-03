@@ -38,6 +38,9 @@ public abstract class View {
 	protected int[][] coordDiffs = new int[3][2];
 	protected int[] coordYSteps = new int[3];
 	protected int[] barycentricCoord = new int[3];
+	protected double[][][] multipliedCoord = new double[2][][];
+	protected double[] coords = new double[3];
+	protected int[] bounds = new int[4];
 
 	//angles
 	protected double theta = 0;
@@ -56,9 +59,11 @@ public abstract class View {
 
 	//reusable objects
 	protected int indexNextReusableProjection = 0;
-	protected int indexNextReusableTreeMap = 0;
+	protected int indexNextReusableMap = 0;
 	protected ArrayList<int[]> reusableProjections = new ArrayList<int[]>();
 	protected ArrayList<TreeMap<Double, Chunk>> sortedChunksByChunkLevel = new ArrayList<TreeMap<Double, Chunk>>();
+	protected ArrayList<TreeMap<Point, int[]>> reusableChunkProjections = new ArrayList<TreeMap<Point, int[]>>();
+
 
 	//maps for general purpose
 	protected HashMap<Point, int[]> tempPointsInChunk = new HashMap<Point, int[]>(128);
@@ -87,21 +92,33 @@ public abstract class View {
 
 		for (int i = 0; i < maxChunkLevel + 1; i++) {
 			sortedChunksByChunkLevel.add(i, new TreeMap<Double, Chunk>(doubleComparator));
+			reusableChunkProjections.add(i, new TreeMap<Point, int[]>());
 		}
+
+		reusableChunkProjections.add(new TreeMap<Point, int[]>());
 
 		for (int i = 0; i < 30; i++) {
 			reusableProjections.add(new int[2]);
 		}
 
 		addDirection(0, 0);
+
+		for (int i = 0; i < 2; i++) {
+			multipliedCoord[i] = new double[3][];
+			for (int j = 0; j < 3; j++) {
+				multipliedCoord[i][j] = new double[2];
+			}
+		}
 	}
 
 	/** determines recursively which chunks to draw */
-	public void sortChunksAndDraw(TreeMap<Point, Object> chunks, int originChunkLevel, int debugChunkLevel) {
-		// TreeMap<Double, Chunk> sortedChunks = new TreeMap<Double, Chunk>();
-		TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(indexNextReusableTreeMap);
+	// public void sortChunksAndDraw(TreeMap<Point, Object> chunks, TreeMap<Point, int[]> biggerChunkPoints, int biggerChunkXMin, int originChunkLevel, int debugChunkLevel) {
+	public void sortChunksAndDraw(TreeMap<Point, Object> chunks, int biggerChunkXMin, int originChunkLevel, int debugChunkLevel) {
+		// TreeMap<Double, Chunk> sortedChunks = new TreeMap<Double, Chunk>(doubleComparator);
+		TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(indexNextReusableMap);
+		// TreeMap<Point, int[]> currentChunkPoints = reusableChunkProjections.get(indexNextReusableMap + 1);
 		sortedChunks.clear();
-		indexNextReusableTreeMap++;
+		indexNextReusableMap++;
 		
 		for (Object object : chunks.values()) {
 			Chunk chunk = (Chunk)object;
@@ -112,12 +129,16 @@ public abstract class View {
 
 		for (Chunk chunk : sortedChunks.values()) {
 			//conditions : not be hidden behind other chunks + be in screen space
-			if (isChunkVisible(chunk)) {
+			// currentChunkPoints.clear();
+			int currentChunkXMin = isChunkVisible(chunk, biggerChunkXMin);
+			if (currentChunkXMin != -1) {
 				if (chunk.getChunkLevel() == 0) {
 					sortTrianglesInChunk(chunk);
 					drawTrianglesInChunk();
 				} else {
-					sortChunksAndDraw(chunk.getSmallerChunks(), chunk.getChunkLevel(), debugChunkLevel);
+					// sortChunksAndDraw(chunk.getSmallerChunks(), currentChunkPoints, boundXMin, chunk.getChunkLevel(), debugChunkLevel);
+					sortChunksAndDraw(chunk.getSmallerChunks(), currentChunkXMin, chunk.getChunkLevel(), debugChunkLevel);
+
 				}
 
 				//debug modes
@@ -132,7 +153,7 @@ public abstract class View {
 				}
 			}
 		}
-		indexNextReusableTreeMap--;
+		indexNextReusableMap--;
 	}
 
 	/** returns a list of visible triangles sorted by distance to camera */
@@ -145,7 +166,6 @@ public abstract class View {
 			Triangle tri = (Triangle)object;
 			tri.getCenterOfGravity(replaceablePoint);
 			replaceableVector.setVector(replaceablePoint, viewPoint);
-			// replaceableVector.setVector(tri.getCenterOfGravity(), viewPoint);
 
 			// Object must be facing towards the camera
 			if (tri.getNormal().getScalarProduct(replaceableVector) > 0) {
@@ -155,7 +175,7 @@ public abstract class View {
 					if (!tempPointsInChunk.containsKey(p)) {
 						int[] proj = getReusableProjection();
 						// int[] proj = new int[2];
-						compute2DProjection(p, proj);
+						compute2DProjectionTriangle(p, proj);
 						// if (proj == null) {
 						// 	triangleVisible = false;
 						// 	break;
@@ -173,55 +193,65 @@ public abstract class View {
 	}
 
 	/** returns a box containing the 2D view of the chunk if it is in screen space and contains at least one visible pixel, null otherwise */
-	public boolean isChunkVisible(Chunk chunk) {
-		int xMin = Integer.MAX_VALUE;
-		int xMax = Integer.MIN_VALUE;
-		int yMin = Integer.MAX_VALUE;
-		int yMax = Integer.MIN_VALUE;
+	// public int isChunkVisible(Chunk chunk, int biggerChunkXMin, TreeMap<Point, int[]> biggerChunkPoints, TreeMap<Point, int[]> currentChunkPoints) {
+	public int isChunkVisible(Chunk chunk, int biggerChunkXMin) {
+		bounds[0] = Integer.MAX_VALUE;
+		bounds[1] = Integer.MIN_VALUE;
+		bounds[2] = Integer.MAX_VALUE;
+		bounds[3] = Integer.MIN_VALUE;
 
-		// boolean chunkBehind = true;
-		Point pt = chunk.getCoord();
-		for (int i = 0; i < 2; i++) {
-			for (int j = 0; j < 2; j++) {
-				for (int k = 0; k < 2; k++) {
-					replaceablePoint.setPoint(pt.getX() + i * chunk.getChunkSize(), pt.getY() + j * chunk.getChunkSize(), pt.getZ() + k * chunk.getChunkSize());
-					compute2DProjection(replaceablePoint, projection);
-					// if (compute2DProjection(replaceablePoint, projection)) {
-						// chunkBehind = false;
-					// }
+		// boolean alreadyComputed = false;
+		// for (int i = 0; i < 8; i++) {
+		// 	Point p = chunk.getPoints()[i];
+		// 	int[] proj = biggerChunkPoints.get(p);
+		// 	if (proj == null) {
+		// 		//need computation of bounds
+		// 		if (!alreadyComputed) {
+		// 			alreadyComputed = true;
+		// 			prepare2DProjectionChunk(chunk.getCoord(), chunk.getChunkSize());
+		// 		}
+		// 		proj = new int[2];
+		// 		compute2DProjectionChunk(proj, i);
+		// 	} 
 
-					xMin = Math.min(xMin, projection[0]);
-					xMax = Math.max(xMax, projection[0]);
-					yMin = Math.min(yMin, projection[1]);
-					yMax = Math.max(yMax, projection[1]);
-				}
-			}
-		}
+		// 	bounds[0] = Math.min(bounds[0], proj[0]);
+		// 	bounds[1] = Math.max(bounds[1], proj[0]);
+		// 	bounds[2] = Math.min(bounds[2], proj[1]);
+		// 	bounds[3] = Math.max(bounds[3], proj[1]);
+
+		// 	biggerChunkPoints.putIfAbsent(p, proj);
+		// 	currentChunkPoints.put(p, proj);
+		// }
+
+		compute2DProjectionChunk(chunk.getCoord(), chunk.getChunkSize());
 
 		//if the chunk is in front of the player and if the box is out of screen space
-		if (xMax < 0 || xMin >= width || yMax < 0 || yMin >= height) {
-		// if (chunkBehind && (xMax < 0 || xMin >= width || yMax < 0 || yMin >= height)) {
-			return false;
+		if ((bounds[2] += centerY) >= height || (bounds[3] += centerY) < 0 
+		|| (bounds[0] += centerX) >= width || (bounds[1] += centerX) < biggerChunkXMin) {
+		// if (chunkBehind && (bounds[1] < 0 || bounds[0] >= width || bounds[3] < 0 || bounds[2] >= height)) {
+			return -1;
 		}
 
-		xMin = Math.max(0, xMin);
-		xMax = Math.min((int)width-1, xMax);
-		yMin = Math.max(0, yMin);
-		yMax = Math.min((int)height-1, yMax);
+		bounds[2] = Math.max(0, bounds[2]);
+		bounds[3] = Math.min(height, bounds[3]);
 
-		if (yMin == yMax) {
-			return false;
+		if (bounds[2] == bounds[3]) {
+			return -1;
 		}
 
-		//if at least one pixel is visible (black) in depth buffer
-		for (int i = xMin; i < xMax; i++) {
-			for (int j = yMin; j < yMax; j++) {
+		bounds[0] = Math.max(biggerChunkXMin, bounds[0]);
+		bounds[1] = Math.min(width, bounds[1]);
+
+		// if at least one pixel is visible (black) in depth buffer
+		for (int i = bounds[0]; i < bounds[1]; i++) {
+			for (int j = bounds[2]; j < bounds[3]; j++) {
 				if (depthBuffer.getRGB(i, j) == -16777216) {
-					return true;
+					return i;
 				}
 			}
 		}
-		return false;
+
+		return -1;
 	}
 
 	/* returns a useable array for projection from a pool, extends the pool if necessary */
@@ -234,8 +264,100 @@ public abstract class View {
 		return reusableProjections.get(indexNextReusableProjection);
 	}
 
+	public void compute2DProjectionChunk(Point p, double chunkSize) {
+		coords[0] = p.getX() - viewPoint.getX();
+        coords[1] = p.getY() - viewPoint.getY();
+        coords[2] = p.getZ() - viewPoint.getZ();
+		
+		//compute all multiplied cosinus/sinuses before translation
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 3; j++) {	
+				if (j < 2) {
+					multipliedCoord[i][j][0] = coords[j] * cosTheta;
+					multipliedCoord[i][j][1] = coords[j] * sinTheta;
+				} else {
+					multipliedCoord[i][j][0] = coords[j] * cosPhi;
+					multipliedCoord[i][j][1] = coords[j] * sinPhi;
+				}
+			}
+
+			if (i == 0) {
+				for (int j = 0; j < 3; j++) {
+					coords[j] += chunkSize;
+				}
+			}
+		}
+
+		double x, y, yBefore, z;
+
+		//compute x, y, z and projections
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 2; j++) {	
+				//x isn't function of z
+				x = multipliedCoord[i][0][0] + multipliedCoord[j][1][1];
+				yBefore = multipliedCoord[j][1][0] - multipliedCoord[i][0][1];
+				for (int k = 0; k < 2; k++) {	
+					y = yBefore * cosPhi + multipliedCoord[k][2][1];
+					z = multipliedCoord[k][2][0] - yBefore * sinPhi;
+
+					//project
+					projection[0] = (int)(x * focalDistance / y);
+					projection[1] = - (int)(z * focalDistance / y);
+
+					bounds[0] = Math.min(bounds[0], projection[0]);
+					bounds[1] = Math.max(bounds[1], projection[0]);
+					bounds[2] = Math.min(bounds[2], projection[1]);
+					bounds[3] = Math.max(bounds[3], projection[1]);
+				}
+			}
+		}
+	}
+
+	public void prepare2DProjectionChunk(Point p, double chunkSize) {
+		coords[0] = p.getX() - viewPoint.getX();
+        coords[1] = p.getY() - viewPoint.getY();
+        coords[2] = p.getZ() - viewPoint.getZ();
+		
+		//compute all multiplied cosinus/sinuses before translation
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 3; j++) {	
+				if (j < 2) {
+					multipliedCoord[i][j][0] = coords[j] * cosTheta;
+					multipliedCoord[i][j][1] = coords[j] * sinTheta;
+				} else {
+					multipliedCoord[i][j][0] = coords[j] * cosPhi;
+					multipliedCoord[i][j][1] = coords[j] * sinPhi;
+				}
+			}
+
+			if (i == 0) {
+				for (int j = 0; j < 3; j++) {
+					coords[j] += chunkSize;
+				}
+			}
+		}
+	}
+
+	public void compute2DProjectionChunk(int[] proj, int index) {
+		double x, y, yBefore, z;
+
+		int i = index & 1;
+		int j = (index >> 1) & 1;
+		int k = (index >> 2) & 1;
+
+		//compute x, y, z and projections
+		x = multipliedCoord[i][0][0] + multipliedCoord[j][1][1];
+		yBefore = multipliedCoord[j][1][0] - multipliedCoord[i][0][1];
+		y = yBefore * cosPhi + multipliedCoord[k][2][1];
+		z = multipliedCoord[k][2][0] - yBefore * sinPhi;
+
+		//project
+		proj[0] = (int)(x * focalDistance / y);
+		proj[1] = - (int)(z * focalDistance / y);
+	}
+
 	/** computes the coordinates of the point in the new base, then computes its 2D projection */
-	public boolean compute2DProjection(Point p, int[] projection) {
+	public boolean compute2DProjectionTriangle(Point p, int[] projection) {
 		//translation
         double x = p.getX() - viewPoint.getX();
         double y = p.getY() - viewPoint.getY();
@@ -293,11 +415,13 @@ public abstract class View {
 				int areaTri = coordDiffs[1][0] * coordDiffs[0][1] - coordDiffs[0][0] * coordDiffs[1][1];
 				if (areaTri != 0) {
 					xMin = Math.max(0, xMin);
-					xMax = Math.min((int)width-1, xMax);
+					xMax = Math.min(width-1, xMax);
 					yMin = Math.max(0, yMin);
-					yMax = Math.min((int)height-1, yMax);
+					yMax = Math.min(height-1, yMax);
 	
-					drawFunction(tri, xMin, xMax, yMin, yMax, areaTri);
+					if (xMin != xMax && yMin != yMax) {
+						drawFunction(tri, xMin, xMax, yMin, yMax, areaTri);
+					}
 				}
 			}
 		}
@@ -322,7 +446,15 @@ public abstract class View {
 		gDepthBuffer.fillRect(0, 0, width, height);
 		
 		debugChunksToDraw.clear();
-		sortChunksAndDraw(chunks, originChunkLevel, debugChunkLevel);
+
+		// TreeMap<Point, int[]> biggerChunkProjections = reusableChunkProjections.get(0);
+		// biggerChunkProjections.clear();
+		int[] bounds = new int[4];
+		bounds[0] = 0;
+		bounds[1] = width - 1;
+		bounds[2] = 0;
+		bounds[3] = height - 1;
+		sortChunksAndDraw(chunks, 0, originChunkLevel, debugChunkLevel);
 	}
 
 	//---GETTERS---

@@ -29,17 +29,23 @@ public class Chunk {
 	public Point[] getPoints() {
 		Point[] points = new Point[8];
 
-		for (int i = 0; i < 8; i++) {
-			points[i] = new Point(coord);
-		}
+		double x = coord.getX();
+		double y = coord.getY();	
+		double z = coord.getZ();
 
-		points[1].add(new Point(chunkSize, 0, 0));
-		points[2].add(new Point(0, 0, chunkSize));
-		points[3].add(new Point(chunkSize, 0, chunkSize));
-		points[4].add(new Point(0, chunkSize, 0));
-		points[5].add(new Point(chunkSize, chunkSize, 0));
-		points[6].add(new Point(0, chunkSize, chunkSize));
-		points[7].add(new Point(chunkSize, chunkSize, chunkSize));
+		double x1 = x + chunkSize;
+		double y1 = z + chunkSize;	
+		double z1 = x + chunkSize;
+
+		points[0] = new Point(x, y, z);
+		points[2] = new Point(x, y, z1);
+		points[4] = new Point(x, y1, z);
+		points[6] = new Point(x, y1, z1);
+
+		points[1] = new Point(x1, y, z);
+		points[3] = new Point(x1, y, z1);
+		points[5] = new Point(x1, y1, z);
+		points[7] = new Point(x1, y1, z1);
 
 		return points;
 	}

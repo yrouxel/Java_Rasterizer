@@ -159,8 +159,8 @@ public class Projecter2D extends JFrame {
 	public void drawLine(Graphics g, Point a, Point b) {
 		int[] projA = new int[2];
 		int[] projB = new int[2];
-		view.compute2DProjection(a, projA);
-		view.compute2DProjection(b, projB);
+		view.compute2DProjectionTriangle(a, projA);
+		view.compute2DProjectionTriangle(b, projB);
 
 		if (a.getY() > 0 && b.getY() > 0) {
 			g.drawLine(projA[0], projA[1], projB[0], projB[1]);
