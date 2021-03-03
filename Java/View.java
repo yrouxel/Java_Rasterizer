@@ -449,11 +449,6 @@ public abstract class View {
 
 		// TreeMap<Point, int[]> biggerChunkProjections = reusableChunkProjections.get(0);
 		// biggerChunkProjections.clear();
-		int[] bounds = new int[4];
-		bounds[0] = 0;
-		bounds[1] = width - 1;
-		bounds[2] = 0;
-		bounds[3] = height - 1;
 		sortChunksAndDraw(chunks, 0, originChunkLevel, debugChunkLevel);
 	}
 
