@@ -37,8 +37,6 @@ public class PlayerView extends View {
 	public void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax, int areaTri) {
 		float[] colorModifiers = tri.getColorModifiers();
 		if (colorModifiers[0] != -1) {
-			areaTri = Math.abs(areaTri);
-
 			BufferedImage texture = tri.getTexture();
 			TexturePoint[] texturePoints = tri.getTexturePoints();
 	
@@ -51,16 +49,15 @@ public class PlayerView extends View {
 
 			boolean firstPixelFound;
 			for (int y = yMin; y < yMax; y++) {
-				for (int i = 0; i < 3; i++) {
+				for (int i = 0; i < 2; i++) {
 					coordYSteps[i] = coordDiffs[i][0] * (y - vertices[i][1]);
 				}
 				firstPixelFound = false;
 				for (int x = xMin; x < xMax; x++) {
-					if (depthBuffer.getRGB(x, y) == -16777216) {
-						computeBarycentricCoords(x);
-						if (barycentricCoord[0] != -1) {
+					if (computeBarycentricCoords(x, areaTri)) {
+						firstPixelFound = true;
+						if (depthBuffer.getRGB(x, y) == -16777216) {
 							depthBuffer.setRGB(x, y, -1);
-							firstPixelFound = true;
 
 							// textX = 0;
 							// textY = 0;
@@ -78,29 +75,27 @@ public class PlayerView extends View {
 							rgb = (int)(colorModifiers[0] * (float)redTexture) << 16 | (int)(colorModifiers[1] * (float)greenTexture) << 8 | (int)(colorModifiers[2] * (float)blueTexture);
 							// imageExtendedBuffer.setRGB(x, y, rgb);
 							imageBuffer.setRGB(x, y, rgb);
-
-						} else if (firstPixelFound) {
-							break;
 						}
+					} else if (firstPixelFound) {
+						break;
 					}
 				}
 			}
 		} else {
 			boolean firstPixelFound;
 			for (int y = yMin; y < yMax; y++) {
-				for (int i = 0; i < 3; i++) {
+				for (int i = 0; i < 2; i++) {
 					coordYSteps[i] = coordDiffs[i][0] * (y - vertices[i][1]);
 				}
 				firstPixelFound = false;
 				for (int x = xMin; x < xMax; x++) {
-					if (depthBuffer.getRGB(x, y) == -16777216) {
-						computeBarycentricCoords(x);
-						if (barycentricCoord[0] != -1) {
+					if (computeBarycentricCoords(x, areaTri)) {
+						firstPixelFound = true;
+						if (depthBuffer.getRGB(x, y) == -16777216) {
 							depthBuffer.setRGB(x, y, -1);
-							firstPixelFound = true;
-						} else if (firstPixelFound) {
-							break;
 						}
+					} else if (firstPixelFound) {
+						break;
 					}
 				}
 			}

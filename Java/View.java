@@ -2,6 +2,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.TreeMap;
 import java.awt.Graphics;
 import java.awt.*;
@@ -35,8 +36,8 @@ public abstract class View {
 	//pixels to draw
 	protected int[] projection = new int[2];
 	protected int[][] vertices = new int[3][2];
-	protected int[][] coordDiffs = new int[3][2];
-	protected int[] coordYSteps = new int[3];
+	protected int[][] coordDiffs = new int[2][2];
+	protected int[] coordYSteps = new int[2];
 	protected int[] barycentricCoord = new int[3];
 	protected double[][][] multipliedCoord = new double[2][][];
 	protected double[] coords = new double[3];
@@ -62,8 +63,7 @@ public abstract class View {
 	protected int indexNextReusableMap = 0;
 	protected ArrayList<int[]> reusableProjections = new ArrayList<int[]>();
 	protected ArrayList<TreeMap<Double, Chunk>> sortedChunksByChunkLevel = new ArrayList<TreeMap<Double, Chunk>>();
-	protected ArrayList<TreeMap<Point, int[]>> reusableChunkProjections = new ArrayList<TreeMap<Point, int[]>>();
-
+	protected LinkedList<TreeMap<Point, int[]>> reusableChunkProjections  = new LinkedList<TreeMap<Point, int[]>>();
 
 	//maps for general purpose
 	protected HashMap<Point, int[]> tempPointsInChunk = new HashMap<Point, int[]>(128);
@@ -91,8 +91,8 @@ public abstract class View {
 		gDepthBuffer = depthBuffer.getGraphics();
 
 		for (int i = 0; i < maxChunkLevel + 1; i++) {
-			sortedChunksByChunkLevel.add(i, new TreeMap<Double, Chunk>(doubleComparator));
-			reusableChunkProjections.add(i, new TreeMap<Point, int[]>());
+			sortedChunksByChunkLevel.add(new TreeMap<Double, Chunk>(doubleComparator));
+			reusableChunkProjections.add(new TreeMap<Point, int[]>());
 		}
 
 		reusableChunkProjections.add(new TreeMap<Point, int[]>());
@@ -116,9 +116,9 @@ public abstract class View {
 	public void sortChunksAndDraw(TreeMap<Point, Object> chunks, int biggerChunkXMin, int originChunkLevel, int debugChunkLevel) {
 		// TreeMap<Double, Chunk> sortedChunks = new TreeMap<Double, Chunk>(doubleComparator);
 		TreeMap<Double, Chunk> sortedChunks = sortedChunksByChunkLevel.get(indexNextReusableMap);
-		// TreeMap<Point, int[]> currentChunkPoints = reusableChunkProjections.get(indexNextReusableMap + 1);
-		sortedChunks.clear();
 		indexNextReusableMap++;
+		// TreeMap<Point, int[]> currentChunkPoints = reusableChunkProjections.removeFirst();
+		sortedChunks.clear();
 		
 		for (Object object : chunks.values()) {
 			Chunk chunk = (Chunk)object;
@@ -130,13 +130,14 @@ public abstract class View {
 		for (Chunk chunk : sortedChunks.values()) {
 			//conditions : not be hidden behind other chunks + be in screen space
 			// currentChunkPoints.clear();
+			// int currentChunkXMin = isChunkVisible(chunk, biggerChunkXMin, biggerChunkPoints, currentChunkPoints);
 			int currentChunkXMin = isChunkVisible(chunk, biggerChunkXMin);
 			if (currentChunkXMin != -1) {
 				if (chunk.getChunkLevel() == 0) {
 					sortTrianglesInChunk(chunk);
 					drawTrianglesInChunk();
 				} else {
-					// sortChunksAndDraw(chunk.getSmallerChunks(), currentChunkPoints, boundXMin, chunk.getChunkLevel(), debugChunkLevel);
+					// sortChunksAndDraw(chunk.getSmallerChunks(), currentChunkPoints, biggerChunkXMin, chunk.getChunkLevel(), debugChunkLevel);
 					sortChunksAndDraw(chunk.getSmallerChunks(), currentChunkXMin, chunk.getChunkLevel(), debugChunkLevel);
 
 				}
@@ -153,7 +154,10 @@ public abstract class View {
 				}
 			}
 		}
+
 		indexNextReusableMap--;
+		// sortedChunksByChunkLevel.add(sortedChunks);
+		// reusableChunkProjections.add(currentChunkPoints);
 	}
 
 	/** returns a list of visible triangles sorted by distance to camera */
@@ -228,19 +232,18 @@ public abstract class View {
 		//if the chunk is in front of the player and if the box is out of screen space
 		if ((bounds[2] += centerY) >= height || (bounds[3] += centerY) < 0 
 		|| (bounds[0] += centerX) >= width || (bounds[1] += centerX) < biggerChunkXMin) {
-		// if (chunkBehind && (bounds[1] < 0 || bounds[0] >= width || bounds[3] < 0 || bounds[2] >= height)) {
 			return -1;
 		}
 
 		bounds[2] = Math.max(0, bounds[2]);
-		bounds[3] = Math.min(height, bounds[3]);
+		bounds[3] = Math.min(height - 1, bounds[3]);
 
 		if (bounds[2] == bounds[3]) {
 			return -1;
 		}
 
 		bounds[0] = Math.max(biggerChunkXMin, bounds[0]);
-		bounds[1] = Math.min(width, bounds[1]);
+		bounds[1] = Math.min(width - 1, bounds[1]);
 
 		// if at least one pixel is visible (black) in depth buffer
 		for (int i = bounds[0]; i < bounds[1]; i++) {
@@ -405,23 +408,21 @@ public abstract class View {
 
 			//if box is at least partially inside screen space clip it
 			if (xMax >= 0 && xMin < width && yMax >= 0 && yMin < height) {
-				for (int i = 0; i < 3; i++) {
+				for (int i = 0; i < 2; i++) {
 					int iLastVert = (i+2)%3;
 					coordDiffs[i][0] = vertices[iLastVert][0] - vertices[i][0];
 					coordDiffs[i][1] = vertices[iLastVert][1] - vertices[i][1];
 				}
 				
 				// if triangle contains at least 1 pixel
-				int areaTri = coordDiffs[1][0] * coordDiffs[0][1] - coordDiffs[0][0] * coordDiffs[1][1];
+				int areaTri = coordDiffs[0][0] * coordDiffs[1][1] - coordDiffs[1][0] * coordDiffs[0][1];
 				if (areaTri != 0) {
 					xMin = Math.max(0, xMin);
 					xMax = Math.min(width-1, xMax);
 					yMin = Math.max(0, yMin);
 					yMax = Math.min(height-1, yMax);
-	
-					if (xMin != xMax && yMin != yMax) {
-						drawFunction(tri, xMin, xMax, yMin, yMax, areaTri);
-					}
+
+					drawFunction(tri, xMin, xMax, yMin, yMax, areaTri);
 				}
 			}
 		}
@@ -430,15 +431,18 @@ public abstract class View {
 	public abstract void drawFunction(Triangle tri, int xMin, int xMax, int yMin, int yMax, int areaTri);
 
 	/** checks if a given point is a triangle by a methode of cross products */
-	public void computeBarycentricCoords(int ptX){
-		for (int i = 0; i < 3; i++) {
+	public boolean computeBarycentricCoords(int ptX, int areaTri){
+		for (int i = 0; i < 2; i++) {
 			//(x1-x3)(y2-y3) - (x2-x3)(y1-y3)
 			barycentricCoord[i] = (ptX - vertices[i][0]) * coordDiffs[i][1] - coordYSteps[i];
 			if (barycentricCoord[i] < 0) {
-				barycentricCoord[0] = -1;
-				return;
+				return false;
 			}
 		}
+		if ((barycentricCoord[2] = areaTri - barycentricCoord[0] - barycentricCoord[1]) < 0) {
+			return false;
+		}
+		return true;
 	}
 
 	public void computeView(TreeMap<Point, Object> chunks, int originChunkLevel, int debugChunkLevel) {
@@ -447,8 +451,10 @@ public abstract class View {
 		
 		debugChunksToDraw.clear();
 
-		// TreeMap<Point, int[]> biggerChunkProjections = reusableChunkProjections.get(0);
+		// TreeMap<Point, int[]> biggerChunkProjections = reusableChunkProjections.removeFirst();
 		// biggerChunkProjections.clear();
+		// sortChunksAndDraw(chunks, biggerChunkProjections, 0, originChunkLevel, debugChunkLevel);
+		// reusableChunkProjections.add(biggerChunkProjections);
 		sortChunksAndDraw(chunks, 0, originChunkLevel, debugChunkLevel);
 	}
 

@@ -19,20 +19,19 @@ public class LightView extends View {
 		boolean triangleVisible = false;
 		boolean firstPixelFound;
 		for (int y = yMin; y < yMax; y++) {
-			for (int i = 0; i < 3; i++) {
+			for (int i = 0; i < 2; i++) {
 				coordYSteps[i] = coordDiffs[i][0] * (y - vertices[i][1]);
 			}
 			firstPixelFound = false;
 			for (int x = xMin; x < xMax; x++) {
-				if (depthBuffer.getRGB(x, y) == -16777216) {
-					computeBarycentricCoords(x);
-					if (barycentricCoord[0] != -1) {
+				if (computeBarycentricCoords(x, areaTri)) {
+					firstPixelFound = true;
+					if (depthBuffer.getRGB(x, y) == -16777216) {
 						depthBuffer.setRGB(x, y, -1);
-						firstPixelFound = true;
 						triangleVisible = true;
-					} else if (firstPixelFound) {
-						break;
 					}
+				} else if (firstPixelFound) {
+					break;
 				}
 			}
 		}
