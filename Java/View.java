@@ -227,7 +227,21 @@ public abstract class View {
 		// 	currentChunkPoints.put(p, proj);
 		// }
 
-		compute2DProjectionChunk(chunk.getCoord(), chunk.getChunkSize());
+		double chunkSize = chunk.getChunkSize();
+		TreeMap<Point, Object> chunkMap = chunk.getSmallerChunks();
+		Point first = chunkMap.firstKey();
+		double x = first.getX();
+		if (chunkMap.size() < 5 && chunkMap.lastKey().getX() == x) {
+			double y = first.getY();
+			double halfChunkSize = chunkSize / 2;
+			if (chunkMap.size() == 2 && chunkMap.lastKey().getY() == y) {
+				compute2DProjectionChunk(chunk.getCoord(), x, y, chunkSize, halfChunkSize, halfChunkSize);
+			} else {
+				compute2DProjectionChunk(chunk.getCoord(), x, y , chunkSize, halfChunkSize, chunkSize);
+			}
+		} else {
+			compute2DProjectionChunk(chunk.getCoord(), x, first.getY(), chunkSize, chunkSize, chunkSize);
+		}
 
 		//if the chunk is in front of the player and if the box is out of screen space
 		if ((bounds[2] += centerY) >= height || (bounds[3] += centerY) < 0 
@@ -267,9 +281,9 @@ public abstract class View {
 		return reusableProjections.get(indexNextReusableProjection);
 	}
 
-	public void compute2DProjectionChunk(Point p, double chunkSize) {
-		coords[0] = p.getX() - viewPoint.getX();
-        coords[1] = p.getY() - viewPoint.getY();
+	public void compute2DProjectionChunk(Point p, double xCoord, double yCoord, double chunkSize, double chunkSizeX, double chunkSizeY) {
+		coords[0] = xCoord - viewPoint.getX();
+        coords[1] = yCoord - viewPoint.getY();
         coords[2] = p.getZ() - viewPoint.getZ();
 		
 		//compute all multiplied cosinus/sinuses before translation
@@ -285,9 +299,9 @@ public abstract class View {
 			}
 
 			if (i == 0) {
-				for (int j = 0; j < 3; j++) {
-					coords[j] += chunkSize;
-				}
+				coords[0] += chunkSizeX;
+				coords[1] += chunkSizeY;
+				coords[2] += chunkSize;
 			}
 		}
 
