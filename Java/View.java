@@ -244,20 +244,15 @@ public abstract class View {
 		}
 
 		//if the chunk is in front of the player and if the box is out of screen space
-		if ((bounds[2] += centerY) >= height || (bounds[3] += centerY) < 0 
-		|| (bounds[0] += centerX) >= width || (bounds[1] += centerX) < biggerChunkXMin) {
-			return -1;
-		}
-
-		bounds[2] = Math.max(0, bounds[2]);
-		bounds[3] = Math.min(height - 1, bounds[3]);
-
-		if (bounds[2] == bounds[3]) {
+		if ((bounds[2] += centerY) >= height || (bounds[3] += centerY) < 0 ||
+			(bounds[0] += centerX) >= width || (bounds[1] += centerX) < biggerChunkXMin) {
 			return -1;
 		}
 
 		bounds[0] = Math.max(biggerChunkXMin, bounds[0]);
 		bounds[1] = Math.min(width - 1, bounds[1]);
+		bounds[2] = Math.max(0, bounds[2]);
+		bounds[3] = Math.min(height - 1, bounds[3]);
 
 		// if at least one pixel is visible (black) in depth buffer
 		for (int i = bounds[0]; i < bounds[1]; i++) {
