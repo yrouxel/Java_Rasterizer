@@ -51,6 +51,11 @@ public class Vector {
 		z += v.z;
 	}
 
+	public void rotate(double theta, double phi) {
+		rotate(Math.cos(theta), Math.sin(theta), Math.cos(phi), Math.sin(phi));
+	}
+
+
     public void rotate(double cosTheta, double sinTheta, double cosPhi, double sinPhi) {
         double xBefore = x;
 

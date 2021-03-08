@@ -139,7 +139,6 @@ public abstract class View {
 				} else {
 					// sortChunksAndDraw(chunk.getSmallerChunks(), currentChunkPoints, biggerChunkXMin, chunk.getChunkLevel(), debugChunkLevel);
 					sortChunksAndDraw(chunk.getSmallerChunks(), currentChunkXMin, chunk.getChunkLevel(), debugChunkLevel);
-
 				}
 
 				//debug modes
@@ -231,16 +230,17 @@ public abstract class View {
 		TreeMap<Point, Object> chunkMap = chunk.getSmallerChunks();
 		Point first = chunkMap.firstKey();
 		double x = first.getX();
+		double z = chunk.getCoord().getZ();
 		if (chunkMap.size() < 5 && chunkMap.lastKey().getX() == x) {
 			double y = first.getY();
 			double halfChunkSize = chunkSize / 2;
 			if (chunkMap.size() == 2 && chunkMap.lastKey().getY() == y) {
-				compute2DProjectionChunk(chunk.getCoord(), x, y, chunkSize, halfChunkSize, halfChunkSize);
+				compute2DProjectionChunk(x, y, z, halfChunkSize, halfChunkSize, chunkSize);
 			} else {
-				compute2DProjectionChunk(chunk.getCoord(), x, y , chunkSize, halfChunkSize, chunkSize);
+				compute2DProjectionChunk(x, y, z, halfChunkSize, chunkSize, chunkSize);
 			}
 		} else {
-			compute2DProjectionChunk(chunk.getCoord(), x, first.getY(), chunkSize, chunkSize, chunkSize);
+			compute2DProjectionChunk(x, chunk.getCoord().getY(), z, chunkSize, chunkSize, chunkSize);
 		}
 
 		//if the chunk is in front of the player and if the box is out of screen space
@@ -276,10 +276,10 @@ public abstract class View {
 		return reusableProjections.get(indexNextReusableProjection);
 	}
 
-	public void compute2DProjectionChunk(Point p, double xCoord, double yCoord, double chunkSize, double chunkSizeX, double chunkSizeY) {
+	public void compute2DProjectionChunk(double xCoord, double yCoord, double zCoord, double chunkSizeX, double chunkSizeY, double chunkSizeZ) {
 		coords[0] = xCoord - viewPoint.getX();
         coords[1] = yCoord - viewPoint.getY();
-        coords[2] = p.getZ() - viewPoint.getZ();
+        coords[2] = zCoord - viewPoint.getZ();
 		
 		//compute all multiplied cosinus/sinuses before translation
 		for (int i = 0; i < 2; i++) {
@@ -296,7 +296,7 @@ public abstract class View {
 			if (i == 0) {
 				coords[0] += chunkSizeX;
 				coords[1] += chunkSizeY;
-				coords[2] += chunkSize;
+				coords[2] += chunkSizeZ;
 			}
 		}
 
