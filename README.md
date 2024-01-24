@@ -34,3 +34,9 @@ CONTROLS:
 	n: next chunk
 	b: enter chunk
 	v: back to root
+
+EXAMPLES OF RENDER
+
+![Exemple of render](https://github.com/yrouxel/Java_Rasterizer/blob/main/renders/holographic%20bike.png?raw=true)
+
+![Exemple of render](https://github.com/yrouxel/Java_Rasterizer/blob/main/renders/good%20looking%20shadows.png?raw=true)
