@@ -275,6 +275,7 @@ public abstract class View {
 		return -1;
 	}
 
+	// why ?
 	/* returns a useable array for projection from a pool, extends the pool if necessary */
 	public int[] getReusableProjection() {
 		if (indexNextReusableProjection == reusableProjections.size()) {
@@ -309,7 +310,7 @@ public abstract class View {
 			}
 		}
 
-		double x, y, yBefore, z;
+		double x, yinverse, yBefore, z;
 
 		//compute x, y, z and projections
 		for (int i = 0; i < 2; i++) {
@@ -318,12 +319,12 @@ public abstract class View {
 				x = multipliedCoord[i][0][0] + multipliedCoord[j][1][1];
 				yBefore = multipliedCoord[j][1][0] - multipliedCoord[i][0][1];
 				for (int k = 0; k < 2; k++) {	
-					y = yBefore * cosPhi + multipliedCoord[k][2][1];
+					yinverse = focalDistance / (yBefore * cosPhi + multipliedCoord[k][2][1]);
 					z = multipliedCoord[k][2][0] - yBefore * sinPhi;
 
 					//project
-					projection[0] = (int)(x * focalDistance / y);
-					projection[1] = - (int)(z * focalDistance / y);
+					projection[0] = (int)(x * yinverse);
+					projection[1] = - (int)(z * yinverse);
 
 					bounds[0] = Math.min(bounds[0], projection[0]);
 					bounds[1] = Math.max(bounds[1], projection[0]);
@@ -360,7 +361,7 @@ public abstract class View {
 	}
 
 	public void compute2DProjectionChunk(int[] proj, int index) {
-		double x, y, yBefore, z;
+		double x, yinverse, yBefore, z;
 
 		int i = index & 1;
 		int j = (index >> 1) & 1;
@@ -369,12 +370,12 @@ public abstract class View {
 		//compute x, y, z and projections
 		x = multipliedCoord[i][0][0] + multipliedCoord[j][1][1];
 		yBefore = multipliedCoord[j][1][0] - multipliedCoord[i][0][1];
-		y = yBefore * cosPhi + multipliedCoord[k][2][1];
+		yinverse = focalDistance / (yBefore * cosPhi + multipliedCoord[k][2][1]);
 		z = multipliedCoord[k][2][0] - yBefore * sinPhi;
 
 		//project
-		proj[0] = (int)(x * focalDistance / y);
-		proj[1] = - (int)(z * focalDistance / y);
+		proj[0] = (int)(x * yinverse);
+		proj[1] = - (int)(z * yinverse);
 	}
 
 	/** computes the coordinates of the point in the new base, then computes its 2D projection */
@@ -391,7 +392,7 @@ public abstract class View {
         double yBefore = y*cosTheta - xBefore*sinTheta;
 
         //phi rotation
-        y = yBefore*cosPhi + z*sinPhi;
+        double yinverse = focalDistance / (yBefore*cosPhi + z*sinPhi);
 		z = z*cosPhi - yBefore*sinPhi;
 
 		// if (z < cosFieldOfView && x < cosFieldOfView * width) {
@@ -399,8 +400,8 @@ public abstract class View {
 		// }
 		
 		//2D Projection
-		projection[0] = centerX + (int)(x * focalDistance / y);
-		projection[1] = centerY - (int)(z * focalDistance / y);
+		projection[0] = centerX + (int)(x * yinverse);
+		projection[1] = centerY - (int)(z * yinverse);
 
 		return true;
     }
