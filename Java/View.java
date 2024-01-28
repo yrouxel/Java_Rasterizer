@@ -8,14 +8,11 @@ import java.awt.Graphics;
 import java.awt.*;
 
 public abstract class View {
-	//provides an ordering without duplicate
+	//provides a normal ordering without duplicate
 	protected final Comparator<Double> doubleComparator = new Comparator<Double>() {
 		public int compare(Double d1, Double d2) {	
-			if (d1 < d2) {
-				return -1;
-			} else {
-				return 1;
-			}
+			if (d1 < d2) return -1;
+			return 1;
 		}
 	};
 
@@ -124,6 +121,18 @@ public abstract class View {
 			Chunk chunk = (Chunk)object;
 			chunk.computeCenter(replaceablePoint);
 			replaceableVector.setVector(replaceablePoint, viewPoint);
+			// replaceableVector.setVector(chunk.getCoord(), viewPoint);
+
+			// int index = 0;
+			// if (replaceableVector.getX() > 0) {
+			// 	index += 4;
+			// }
+			// if (replaceableVector.getY() > 0) {
+			// 	index += 2;
+			// }
+			// if (replaceableVector.getZ() > 0) {
+			// 	index += 1;
+			// }
 			sortedChunks.put(replaceableVector.getSquareNorm(), chunk);
 		}
 
@@ -171,7 +180,7 @@ public abstract class View {
 			replaceableVector.setVector(replaceablePoint, viewPoint);
 
 			// Object must be facing towards the camera
-			if (tri.getNormal().getScalarProduct(replaceableVector) > 0) {
+			if (tri.getNormal().getScalarProduct(replaceableVector) < 0) {
 				// here points 2D projection can be added even if all 3 points aren't visible
 				// boolean triangleVisible = true;
 				for (Point p : tri.getPoints()) {
@@ -444,14 +453,9 @@ public abstract class View {
 		for (int i = 0; i < 2; i++) {
 			//(x1-x3)(y2-y3) - (x2-x3)(y1-y3)
 			barycentricCoord[i] = (ptX - vertices[i][0]) * coordDiffs[i][1] - coordYSteps[i];
-			if (barycentricCoord[i] < 0) {
-				return false;
-			}
+			if (barycentricCoord[i] > 0) return false;
 		}
-		if ((barycentricCoord[2] = areaTri - barycentricCoord[0] - barycentricCoord[1]) < 0) {
-			return false;
-		}
-		return true;
+		return ((barycentricCoord[2] = areaTri - barycentricCoord[0] - barycentricCoord[1]) <= 0);
 	}
 
 	public void computeView(TreeMap<Point, Object> chunks, int originChunkLevel, int debugChunkLevel) {

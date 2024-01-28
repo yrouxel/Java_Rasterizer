@@ -1,4 +1,6 @@
 import java.awt.event.*;
+
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
@@ -16,6 +18,9 @@ public class Projecter2D extends JFrame {
 	private int height;
 	private int centerX;
 	private int centerY;
+
+	// menu variable
+	private boolean isEscaping = false;
 
 	//debug variables
 	private int displayMode;
@@ -41,56 +46,79 @@ public class Projecter2D extends JFrame {
 		}
 	});
 
-	public Projecter2D(World world) {
+	public Projecter2D() {
 		super("3D ENGINE");
-		this.world = world;
 
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		width = (int)dim.getWidth();
-		height = (int)dim.getHeight();
-		centerX = width / 2;
-		centerY =  height / 2;
-
-		Point p = new Point(-300, -1500, 1516);
-		// Point p = new Point(0, 0, 0);
-		views.add(new PlayerView(p, world.getChunkLevel(), Math.PI / 2, width, height, 1));
-		view = views.get(0);
-		views.add(new LightView(p, world.getChunkLevel(), Math.PI / 2, 3*width, 3*height, Color.WHITE.getRGB(), false));
-
-		for (View view : views) {
-			// view.addDirection(Math.PI, 0);
-			view.computeView(world.getChunks(), world.getChunkLevel() + 1, debugChunkLevel);
+		JFileChooser fileChooserPanel = new JFileChooser();
+		int returnValue = fileChooserPanel.showSaveDialog(null);
+ 
+		// if the user selects a file
+		if (returnValue == JFileChooser.APPROVE_OPTION)
+		{
+			this.world = new World(20.0, 2);
+			Object3D obj = new Object3D();
+	
+			// obj.getObjectFromFile("Objects/teapot/teapot.obj");
+			// obj.getObjectFromFile("Objects/WatchTower/wooden_watch_tower.obj");
+	
+			// CHUNK SIZE = 10/20
+			// obj.getObjectFromFile("Objects/doom_combat_scene/doom_combat_scene.obj");
+			
+			// CHUNK SIZE = 20
+			obj.getObjectFromFile(fileChooserPanel.getSelectedFile());
+			// obj.getObjectFromFile("Objects/alien_wall/alien_wall.obj");
+			// obj.getObjectFromFile("Objects/borderlands_cosplay/borderlands_cosplay.obj");
+	
+			System.out.println("ADDING OBJECT");
+			world.addObjectToWorld(obj);
+	
+			Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+			width = (int)dim.getWidth();
+			height = (int)dim.getHeight();
+			centerX = width / 2;
+			centerY =  height / 2;
+	
+			Point p = new Point(-300, -1500, 1516);
+			// Point p = new Point(0, 0, 0);
+			views.add(new PlayerView(p, world.getChunkLevel(), Math.PI / 2, width, height, 1));
+			view = views.get(0);
+			views.add(new LightView(p, world.getChunkLevel(), Math.PI / 2, 3*width, 3*height, Color.WHITE.getRGB(), false));
+	
+			for (View view : views) {
+				// view.addDirection(Math.PI, 0);
+				view.computeView(world.getChunks(), world.getChunkLevel() + 1, debugChunkLevel);
+			}
+	
+			//full screen
+			this.setExtendedState(JFrame.MAXIMIZED_BOTH);
+			this.setUndecorated(true);
+	
+			JPanel mainPanel = new JPanel();
+			mainPanel.setLayout(null);
+			mainPanel.setBackground(Color.green);
+			this.setContentPane(mainPanel);
+	
+			//invisible cursor
+			BufferedImage cursorImg = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+			Cursor blankCursor = Toolkit.getDefaultToolkit().createCustomCursor(cursorImg, new java.awt.Point(0, 0), "blank cursor");
+			mainPanel.setCursor(blankCursor);
+	
+			setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	
+			try {
+				robot = new Robot();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	
+			addKeyListener(new MoveKeyListener());
+			addMouseMotionListener(new CameraMouseListener());
+	
+			setVisible(true);
+	
+			timer.start();
+			robot.mouseMove(centerX, centerY);
 		}
-
-		//full screen
-		this.setExtendedState(JFrame.MAXIMIZED_BOTH);
-		this.setUndecorated(true);
-
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(null);
-		mainPanel.setBackground(Color.green);
-		this.setContentPane(mainPanel);
-
-		//invisible cursor
-		BufferedImage cursorImg = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
-		Cursor blankCursor = Toolkit.getDefaultToolkit().createCustomCursor(cursorImg, new java.awt.Point(0, 0), "blank cursor");
-		mainPanel.setCursor(blankCursor);
-
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-		try {
-			robot = new Robot();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		addKeyListener(new MoveKeyListener());
-		addMouseMotionListener(new CameraMouseListener());
-
-		setVisible(true);
-
-		timer.start();
-		robot.mouseMove(centerX, centerY);
 	}
 
 	@Override
@@ -118,9 +146,42 @@ public class Projecter2D extends JFrame {
 				displayDebug(g2);
 			}
 
+			if (isEscaping) {
+				displayMenu(g2);
+			}
+
 			g.drawImage(image, 0, 0, null);
 			needsRefresh = false;
 		}
+	}
+
+	public void displayMenu(Graphics g) {
+		final int x = 1000;
+		int y = 1;
+
+		g.setColor(Color.WHITE);
+		g.drawString("KEYS", x, 20*y++);
+		g.drawString("MOVE: ZQSD", x, 20*y++);
+		g.drawString("MOVE UP/DOWN: R/F", x, 20*y++);
+		g.drawString("SPEED UP/DOWN: T/G", x, 20*y++);
+		g.drawString("PLACE LIGHTPOINT: P", x, 20*y++);
+		y++;
+		g.drawString("DEBUG KEYS", x, 20*y++);
+		g.drawString("CHANGE DEBUG MODE: O", x, 20*y++);
+		g.drawString("DISPLAY DEPTH BUFFER: I", x, 20*y++);
+		y++;
+		g.drawString("DEBUG MODES", x, 20*y++);
+		g.drawString("0: BASIC", x, 20*y++);
+		g.drawString("1: SHOW ALL CHUNKS AT GIVEN CHUNK LEVEL", x, 20*y++);
+		g.drawString("2: SHOW ALL CHUNKS AT GIVEN CHUNK LEVEL IN THEIR PARENT CHUNK", x, 20*y++);
+		g.drawString("3: PRECISE NAVIGATION THROUGH CHUNKS (SEE BELOW)", x, 20*y++);
+		y++;
+		g.drawString("CHUNK NAVIGATION", x, 20*y++);
+		g.drawString("CHUNK LEVEL UP: Y", x, 20*y++);
+		g.drawString("CHUNK LEVEL DOWN: H", x, 20*y++);
+		g.drawString("NEXT CHUNK: N", x, 20*y++);
+		g.drawString("ENTER CHUNK: B", x, 20*y++);
+		g.drawString("BACK TO ROOT: V", x, 20*y++);
 	}
 
 	public void displayDebug(Graphics g) {
@@ -217,8 +278,9 @@ public class Projecter2D extends JFrame {
 				if (debugChunkLevel == -1) {
 					debugChunkLevel = world.getChunkLevel();
 				}
-			} else if (key == 'u') {
+			} else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 				mouseLocked = !mouseLocked;
+				isEscaping = !isEscaping;
 			} else if (key == 'i') {
 				drawingImage = !drawingImage;
 			} else if (key == 'o') {

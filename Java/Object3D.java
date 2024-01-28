@@ -35,14 +35,14 @@ public class Object3D {
 		return true;
 	}
 
-	public void getObjectFromFile(String path) {
+	public void getObjectFromFile(final File path) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(path), 100000); 
 
 			ArrayList<Point> points = new ArrayList<Point>();
 			ArrayList<TexturePoint> texturesPoints = new ArrayList<TexturePoint>();
 
-			String texturePath = path;
+			String texturePath = path.getAbsolutePath();
 			texturePath = texturePath.split(".obj")[0];
 			texturePath += ".png";
 			texture = ImageIO.read(new File(texturePath));
@@ -57,13 +57,13 @@ public class Object3D {
 				// 	Edges = Integer.parseInt(elements[1]);
 				// } else 
 				if (elements[0].equals("v")) {
-					points.add(new Point(Double.parseDouble(elements[1]), Double.parseDouble(elements[3]), Double.parseDouble(elements[2])));
+					points.add(new Point(-Double.parseDouble(elements[1]), Double.parseDouble(elements[3]), Double.parseDouble(elements[2])));
 				} else if (elements[0].equals("vt")) {
 					texturesPoints.add(new TexturePoint(Double.parseDouble(elements[1]) * width, Double.parseDouble(elements[2]) * height));
 				} else if (elements[0].equals("f")) {
 					if (elements.length == 4) {
 						Triangle tri = new Triangle(points.get(Integer.valueOf(elements[1].split("/")[0])-1), points.get(Integer.valueOf(elements[2].split("/")[0])-1), points.get(Integer.valueOf(elements[3].split("/")[0])-1));
-						tri.addTextures(texturesPoints.get(Integer.valueOf(elements[3].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[1].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[2].split("/")[1])-1), texture);
+						tri.addTextures(texturesPoints.get(Integer.valueOf(elements[1].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[2].split("/")[1])-1), texturesPoints.get(Integer.valueOf(elements[3].split("/")[1])-1), texture);
 						// tri.setColor(computeTriangleColor(tri));
 						triangles.add(tri);
 					} else if (elements.length == 5) {

@@ -24,7 +24,7 @@ public class Triangle{
 	}
 
 	public Triangle(Point a, Point b, Point c) {
-		this(a, b, c, Color.GRAY);
+		this(a, b, c, Color.RED);
 	}
 
 	public void addTextures(TexturePoint a, TexturePoint b, TexturePoint c, BufferedImage texture) {
@@ -81,7 +81,7 @@ public class Triangle{
 				LightView lightView = entry.getKey();
 				Vector triangleToLight = new Vector(getCenterOfGravity(), lightView.getViewPoint());
 				double triangleToLightNorm = triangleToLight.getNorm();
-				double shade = normal.getScalarProduct(triangleToLight) / (normal.getNorm() * triangleToLightNorm);
+				double shade = -normal.getScalarProduct(triangleToLight) / (normal.getNorm() * triangleToLightNorm);
 				if (lightView.isDeclining()) {
 					shade /= triangleToLightNorm;
 				}

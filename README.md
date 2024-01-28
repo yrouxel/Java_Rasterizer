@@ -1,5 +1,7 @@
 # Java_3D_Engine
 
+EDIT MANY YEARS LATER: this was a personal project I did when I was bored as a student during covid(2020? not a school project though) with no prior knowledge about computer graphics or software optimisation. I updated it with quality of life improvements but otherwise kept it as it was, I'm not planning on working on it again. If I did, I'd probably start all over again.
+
 An attempt to build a mono-thread optimization for a multi-thread 3D Engine
 
 CONTROLS:
@@ -15,10 +17,10 @@ CONTROLS:
 	g: speed down
 
 	DEBUG:
-	p: change view point
+	p: change light point
 	o: change debug mode
 	i: show depth buffer
-	u: unlock mouse
+	ESC: KEYS MENU (and locks mouse)
 
 	DEBUG MODES:
 	0: no additional info

@@ -71,8 +71,10 @@ public class PlayerView extends View {
 							// blueTexture  = (rgb >> 8 ) & 0x000000FF;
 							// greenTexture = (rgb      ) & 0x000000FF;
 
-							// rgb = (int)((1.0 - colorModifiers[0]) * (float)redTexture) << 16 | (int)((1.0 - colorModifiers[1]) * (float)greenTexture) << 8 | (int)((1.0 - colorModifiers[2]) * (float)blueTexture);
-							rgb = (int)(colorModifiers[0] * (float)redTexture) << 16 | (int)(colorModifiers[1] * (float)greenTexture) << 8 | (int)(colorModifiers[2] * (float)blueTexture);
+							//hologramme
+							rgb = (int)((1.0 - colorModifiers[0]) * (float)redTexture) << 16 | (int)((1.0 - colorModifiers[1]) * (float)greenTexture) << 8 | (int)((1.0 - colorModifiers[2]) * (float)blueTexture);
+							//normal
+							// rgb = (int)(colorModifiers[0] * (float)redTexture) << 16 | (int)(colorModifiers[1] * (float)greenTexture) << 8 | (int)(colorModifiers[2] * (float)blueTexture);
 							// imageExtendedBuffer.setRGB(x, y, rgb);
 							imageBuffer.setRGB(x, y, rgb);
 						}
